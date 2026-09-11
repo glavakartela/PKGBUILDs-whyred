@@ -1,0 +1,15 @@
+TIMEOUT 15
+
+LABEL whyred-shenchao
+	MENU LABEL Arch Linux ARM (whyred, Shenchao panel)
+	LINUX /vmlinuz
+	FDT /dtbs/whyred/sdm636-xiaomi-whyred-shenchao-td4310.dtb
+	INITRD /initramfs-linux.img
+	APPEND loglevel=2 console=tty0 earlycon=tty0 keep_bootcon root="LABEL=arch_rootfs" rw
+
+LABEL whyred-tianma
+	MENU LABEL Arch Linux ARM (whyred, Tianma panel)
+	LINUX /vmlinuz
+	FDT /dtbs/whyred/sdm636-xiaomi-whyred-tianma-td4310.dtb
+	INITRD /initramfs-linux.img
+	APPEND loglevel=2 console=tty0 earlycon=tty0 keep_bootcon root="LABEL=arch_rootfs" rw

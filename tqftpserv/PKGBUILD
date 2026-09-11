@@ -1,0 +1,25 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=tqftpserv
+pkgver=1.1.1
+pkgrel=1
+pkgdesc="TFTP server for firmware transfer to Qualcomm remote subsystems over QRTR"
+arch=('aarch64')
+url="https://gitlab.postmarketos.org/postmarketOS/tqftpserv"
+license=('BSD-3-Clause')
+depends=('qrtr' 'zstd' 'systemd')
+makedepends=('meson' 'ninja' 'pkgconf')
+provides=('tqftpserv-git')
+conflicts=('tqftpserv-git')
+source=("tqftpserv-1.1.1.tar.gz")
+sha256sums=('455a3009f9fc990667552ae9e6ff66521d71b94216057f05834e91351de9939f')
+
+build() {
+	cd "$srcdir/tqftpserv-$pkgver"
+	arch-meson . build
+	meson compile -C build
+}
+
+package() {
+	cd "$srcdir/tqftpserv-$pkgver"
+	meson install -C build --destdir "$pkgdir"
+}

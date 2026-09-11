@@ -1,0 +1,23 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=bootmac
+pkgver=0.7.1
+pkgrel=1
+pkgdesc="Configure MAC addresses at boot"
+arch=('aarch64')
+url="https://gitlab.postmarketos.org/postmarketOS/bootmac"
+license=('GPL3')
+depends=('bluez' 'systemd')
+makedepends=('meson' 'ninja')
+source=("https://gitlab.postmarketos.org/postmarketOS/bootmac/-/archive/v$pkgver/bootmac-v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+	cd "bootmac-v$pkgver"
+	arch-meson . build -Dsystemd_units=true
+	meson compile -C build
+}
+
+package() {
+	cd "bootmac-v$pkgver"
+	meson install -C build --destdir "$pkgdir"
+}

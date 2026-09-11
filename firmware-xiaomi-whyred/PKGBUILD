@@ -1,0 +1,58 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=firmware-xiaomi-whyred
+pkgver=6
+pkgrel=1
+pkgdesc="Firmware files for Xiaomi Redmi Note 5 Pro (whyred)"
+url="https://postmarketos.org"
+arch=('aarch64')
+license=('custom:proprietary')
+options=('!strip')
+_commit="a00c3503abab8becfc742077ad00a48060fb15d3"
+source=("$pkgname-$_commit.tar.gz::https://github.com/glavakartela/postmarketos-vendor-xiaomi-whyred/archive/$_commit.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+	cd "postmarketos-vendor-xiaomi-whyred-$_commit"
+	_fwdir="$pkgdir/usr/lib/firmware"
+
+	# --- ath10k Wi-Fi (WCN3990) ---
+	install -Dm644 ath10k/WCN3990/hw1.0/firmware-5.bin \
+		-t "$_fwdir/ath10k/WCN3990/hw1.0/"
+	install -Dm644 ath10k/WCN3990/hw1.0/board-2.bin \
+		-t "$_fwdir/ath10k/WCN3990/hw1.0/"
+
+	# --- GPU ZAP shader (Adreno 512) ---
+	install -Dm644 qcom/a512_zap.elf \
+		"$_fwdir/postmarketos/a512_zap.mbn"
+
+	# --- ADSP ---
+	install -Dm644 adspr.jsn  -t "$_fwdir/qcom/"
+	install -Dm644 adsps.jsn  -t "$_fwdir/qcom/"
+	install -Dm644 adspua.jsn -t "$_fwdir/qcom/"
+	install -Dm644 adsp.mbn   -t "$_fwdir/qcom/"
+
+	# --- Modem ---
+	install -Dm644 modemr.jsn  -t "$_fwdir/qcom/"
+	install -Dm644 modemuw.jsn -t "$_fwdir/qcom/"
+	install -Dm644 modem.mbn   -t "$_fwdir/qcom/"
+
+	# --- MBA / WLAN / QDSP6 ---
+	install -Dm644 mba.mbn      -t "$_fwdir/qcom/"
+	install -Dm644 wlanmdsp.mbn -t "$_fwdir/qcom/"
+	install -Dm644 qdsp6m.qdb   -t "$_fwdir/qcom/"
+
+	# --- Speaker amp ---
+	find speakeramp -type f | while read -r f; do
+		install -Dm644 "$f" "$_fwdir/$f"
+	done
+
+	# --- QCA Bluetooth ---
+	find qca -type f | while read -r f; do
+		install -Dm644 "$f" "$_fwdir/$f"
+	done
+
+	# --- everything else under qcom/ ---
+	find qcom -type f ! -name "a512_zap.elf" | while read -r f; do
+		install -Dm644 "$f" "$_fwdir/$f"
+	done
+}

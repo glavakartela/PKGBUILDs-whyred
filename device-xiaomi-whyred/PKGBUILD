@@ -1,0 +1,165 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=device-xiaomi-whyred
+pkgver=3
+pkgrel=1
+pkgdesc="configuration for Xiaomi Redmi Note 5 Pro "
+url="https://postmarketos.org"
+arch=('aarch64')
+license=('MIT' 'BSD-3-Clause' 'GPL3')
+depends=(
+	'firmware-xiaomi-whyred'
+	'linux-qcom-sdm636-whyred'
+	'systemd'
+	'libqmi'
+	'dbus'
+	'alsa-lib'
+	'qrtr'
+	'pd-mapper'
+	'rmtfs'
+	'tqftpserv'
+	'qcom-diag'
+	'qbootctl'
+)
+
+provides=('alsa-ucm-conf')
+conflicts=('alsa-ucm-conf')
+optdepends=(
+	'modemmanager: required for q6voiced call signalling, and for the call-audio-idle-suspend-workaround and modem-gnss services'
+	'ofono: alternative to modemmanager for q6voiced call signalling'
+	'pipewire-pulse: required for the call-audio-idle-suspend-workaround service'
+	'vulkan-icd-loader: Vulkan support for the freedreno GPU driver'
+)
+
+makedepends=('meson' 'ninja')
+backup=(
+	'etc/UPower/UPower.conf'
+	'usr/share/wireplumber/wireplumber.conf.d/51-qcom.conf'
+	'usr/lib/environment.d/50-soc-qcom-gstreamer.conf'
+)
+options=('!strip')
+_alsaucm_commit="d64f7831da66e053dbd80e1c387763e191f77173"
+_q6voicedver=0.2.1
+_swclockver=20260909
+source=(
+	msm-modem-13.tar.gz
+	"q6voiced-$_q6voicedver.tar.gz"
+	"swclock-offset-$_swclockver.tar.gz"
+	"alsa-ucm-conf-$_alsaucm_commit.tar.gz::https://github.com/sdm660-mainline/alsa-ucm-conf/archive/$_alsaucm_commit.tar.gz"
+	UPower.conf
+	51-qcom.conf
+	50-soc-qcom-gstreamer.conf
+	sdm660-adreno-quirks.sh
+	call-audio-idle-suspend-workaround.sh
+	call-audio-idle-suspend-workaround.service
+	modem-gnss.service
+	20-imagis-input.rules
+	20-tm2-touchkey-input.rules
+	20-tm2-touchkey-leds.rules
+	20-zinitix-input.rules
+	msm-firmware-loader.sh
+	msm-firmware-loader.service
+	msm-firmware-loader-unpack.sh
+	msm-firmware-loader-unpack.service
+	msm-firmware-loader-LICENSE
+	extlinux.conf.example
+	mkinitcpio-modules.md
+)
+sha256sums=('e59f1e0781ebbc6aeceb3911b738e85115974eb2da0d37541bde5e4c04ca84ed'
+            '9da2f04629ced10835574da7e88a5277bece1d0fc66d456bf487b50b0fb720fa'
+            'a056a8c5e9b719105a3751ec6f79f3d9a9114b70ca1b561774c451928cdd3a71'
+            'SKIP'
+            'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
+            'SKIP' 'SKIP' 'SKIP' 'SKIP'
+            'bf72af611bb1a12abccb0784ab62bffc8c701b3454a644b1dc1ca494dacb4128'
+            '9659fdd27350360e25149c9544069c9ff973c7f8c4be8d2bb267a12ca8528a4d'
+            '8241156c052014298e628ac586781f7610d1fd0d5c6ce062dc0d677ab9798dda'
+            'bf6331a27a72d0bf847c872319a24c202d66e1d9027d2ffbc8a660fd0a679506'
+            '6fdacfcfe46698f37ec4e84c1d2aea79530cf2f7f1d6fa486f92ae2b22ead3ed'
+            'SKIP' 'SKIP')
+
+build() {
+	cd "$srcdir/msm-modem-13"
+	arch-meson . build \
+		-Dopenrc=false \
+		-Dsystemd=true \
+		-Duim-selection=true \
+		-Dwwan-port=true \
+		-Ddownstream=false
+	meson compile -C build
+	cd "$srcdir"
+
+	cd "q6voiced-$_q6voicedver"
+	arch-meson . build -Dopenrc=disabled -Dsystemd=enabled
+	meson compile -C build
+}
+
+package() {
+	cd "$srcdir/msm-modem-13"
+	meson install -C build --destdir "$pkgdir"
+	cd "$srcdir"
+
+	cd "q6voiced-$_q6voicedver"
+	meson install -C build --destdir "$pkgdir"
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE.q6voiced"
+	cd "$srcdir"
+
+	cd "swclock-offset-$_swclockver"
+	make DESTDIR="$pkgdir" prefix=/usr bin systemd
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE.swclock-offset"
+	cd "$srcdir"
+
+	install -d "$pkgdir/usr/share/alsa"
+	cp -r "alsa-ucm-conf-$_alsaucm_commit/ucm2" "$pkgdir/usr/share/alsa/"
+
+	install -Dm644 UPower.conf \
+		"$pkgdir/etc/UPower/UPower.conf"
+
+	install -Dm644 51-qcom.conf \
+		-t "$pkgdir/usr/share/wireplumber/wireplumber.conf.d"
+
+	install -Dm644 50-soc-qcom-gstreamer.conf \
+		-t "$pkgdir/usr/lib/environment.d"
+
+	install -Dm755 sdm660-adreno-quirks.sh \
+		-t "$pkgdir/etc/profile.d"
+
+	install -Dm755 call-audio-idle-suspend-workaround.sh \
+		"$pkgdir/usr/bin/call_audio_idle_suspend_workaround"
+	install -Dm644 call-audio-idle-suspend-workaround.service \
+		-t "$pkgdir/usr/lib/systemd/user"
+
+	install -Dm644 modem-gnss.service \
+		-t "$pkgdir/usr/lib/systemd/system"
+
+	install -Dm644 20-imagis-input.rules \
+		-t "$pkgdir/usr/lib/udev/rules.d"
+	install -Dm644 20-tm2-touchkey-input.rules \
+		-t "$pkgdir/usr/lib/udev/rules.d"
+	install -Dm644 20-tm2-touchkey-leds.rules \
+		-t "$pkgdir/usr/lib/udev/rules.d"
+	install -Dm644 20-zinitix-input.rules \
+		-t "$pkgdir/usr/lib/udev/rules.d"
+
+	install -Dm755 msm-firmware-loader.sh \
+		"$pkgdir/usr/bin/msm-firmware-loader.sh"
+	install -Dm644 msm-firmware-loader.service \
+		-t "$pkgdir/usr/lib/systemd/system"
+	install -Dm755 msm-firmware-loader-unpack.sh \
+		"$pkgdir/usr/bin/msm-firmware-loader-unpack.sh"
+	install -Dm644 msm-firmware-loader-unpack.service \
+		-t "$pkgdir/usr/lib/systemd/system"
+	install -Dm644 msm-firmware-loader-LICENSE \
+		"$pkgdir/usr/share/licenses/$pkgname/LICENSE.msm-firmware-loader"
+
+	install -d "$pkgdir/usr/lib/systemd/system/sysinit.target.wants"
+	ln -s ../msm-firmware-loader.service \
+		"$pkgdir/usr/lib/systemd/system/sysinit.target.wants/msm-firmware-loader.service"
+	install -d "$pkgdir/usr/lib/systemd/system/multi-user.target.wants"
+	ln -s ../msm-firmware-loader-unpack.service \
+		"$pkgdir/usr/lib/systemd/system/multi-user.target.wants/msm-firmware-loader-unpack.service"
+
+	install -Dm644 extlinux.conf.example \
+		-t "$pkgdir/usr/share/doc/$pkgname/"
+	install -Dm644 mkinitcpio-modules.md \
+		-t "$pkgdir/usr/share/doc/$pkgname/"
+}

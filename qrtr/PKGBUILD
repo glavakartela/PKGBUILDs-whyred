@@ -1,0 +1,22 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=qrtr
+pkgver=1.2
+pkgrel=1
+pkgdesc="Qualcomm IPC router userspace library and tools (qrtr-cfg, qrtr-lookup)"
+arch=('aarch64')
+url="https://github.com/linux-msm/qrtr"
+license=('BSD-3-Clause')
+makedepends=('meson' 'ninja')
+source=("qrtr-1.2.tar.gz")
+sha256sums=('823ee0765e75fb65b907a8e9133de44d460e3f743eaa37bdc7efe8e5c7eb03e7')
+
+build() {
+	cd "$srcdir/qrtr-$pkgver"
+	arch-meson . build
+	meson compile -C build
+}
+
+package() {
+	cd "$srcdir/qrtr-$pkgver"
+	meson install -C build --destdir "$pkgdir"
+}

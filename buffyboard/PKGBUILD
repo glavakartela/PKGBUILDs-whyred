@@ -1,0 +1,31 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=buffyboard
+pkgver=3.6.0
+pkgrel=1
+pkgdesc="Touch-enabled on-screen keyboard for virtual terminals (BuffyBox suite)"
+arch=('aarch64')
+url="https://gitlab.postmarketos.org/postmarketOS/buffybox"
+license=('GPL3')
+depends=('libinih' 'libinput' 'systemd-libs' 'libdrm')
+makedepends=('meson' 'ninja' 'scdoc' 'pkgconf')
+backup=('etc/buffyboard.conf')
+source=("buffyboard-$pkgver.tar.gz")
+sha256sums=('6307d0efa660fbf5668fc1dc1bd0e1d1cbf6a88fac847c086b2b6fbbff0027ee')
+
+build() {
+  cd "$srcdir/buffyboard-$pkgver"
+
+  arch-meson _build \
+    -Dsystemd=true \
+    -Dman=true
+
+  meson compile -C _build \
+    buffyboard/buffyboard \
+    man/buffyboard.1 \
+    man/buffyboard.conf.5
+}
+
+package() {
+  cd "$srcdir/buffyboard-$pkgver"
+  meson install -C _build --tags=buffyboard --destdir="$pkgdir"
+}

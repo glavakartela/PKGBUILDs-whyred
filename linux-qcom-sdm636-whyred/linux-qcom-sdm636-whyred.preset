@@ -1,0 +1,28 @@
+# mkinitcpio preset for linux-qcom-sdm636-whyred
+# Regenerated automatically on install/upgrade via the package's .install
+# script. Produces a single default initramfs at
+# /boot/initramfs-whyred.img referenced by the extlinux entry.
+#
+# CAVEAT: I'm not fully certain mkinitcpio's kernel-version autodetection
+# handles a gzip-compressed arm64 Image.gz cleanly (its usual version
+# parser expects an uncompressed Image or a standard vmlinuz). If
+# `mkinitcpio -p linux-qcom-sdm636-whyred` errors out on version detection,
+# the fix is to set MODULES/kernel dir explicitly - run
+# `mkinitcpio -k "$(cat /usr/share/kernel/qcom-sdm636-whyred/kernel.release)" -g /boot/initramfs-whyred.img`
+# by hand once and see what it says; adjust the .install script to do the
+# same if the plain `-p` form fails.
+# mkinitcpio preset file for the 'linux-aarch64' package
+
+#ALL_config="/etc/mkinitcpio.conf"
+ALL_kver="7.2.3-whyred-glavakartela"
+
+PRESETS=('default')
+
+#default_config="/etc/mkinitcpio.conf"
+default_image="/boot/initramfs-linux.img"
+#default_options=""
+
+#fallback_config="/etc/mkinitcpio.conf"
+fallback_image="/boot/initramfs-linux-fallback.img"
+fallback_options="-S autodetect"
+

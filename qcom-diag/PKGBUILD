@@ -1,0 +1,29 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=qcom-diag
+pkgver=0.git20250324
+pkgrel=1
+pkgdesc="Routing of diagnostics related messages between host and various Qualcomm subsystems"
+arch=('aarch64')
+url="https://github.com/linux-msm/diag"
+license=('BSD-3-Clause')
+depends=('qrtr' 'systemd')
+makedepends=('linux-headers')
+_commit="29277ef0bcbe22468a3836b796dc525ba6df87f3"
+source=(
+	"diag-$_commit.tar.gz::https://github.com/linux-msm/diag/archive/$_commit.tar.gz"
+	diag-router.service
+)
+sha256sums=('SKIP'
+            'SKIP')
+
+build() {
+	cd "diag-$_commit"
+	make prefix=/usr all
+}
+
+package() {
+	cd "diag-$_commit"
+	make prefix=/usr DESTDIR="$pkgdir" install
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/COPYING"
+	install -Dm644 "$srcdir/diag-router.service" -t "$pkgdir/usr/lib/systemd/system"
+}

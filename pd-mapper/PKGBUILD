@@ -1,0 +1,19 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=pd-mapper
+pkgver=20260909
+pkgrel=1
+pkgdesc="Qualcomm protection domain mapper service (QMI servreg_loc over QRTR)"
+arch=('aarch64')
+url="https://gitlab.postmarketos.org/postmarketOS/pd-mapper"
+license=('BSD-3-Clause')
+depends=('qrtr' 'xz')
+provides=('pd-mapper-git')
+conflicts=('pd-mapper-git')
+source=("pd-mapper-$pkgver.tar.gz")
+sha256sums=('be70bc7c2fbba4b535cf04480bc3fd4c843642dcad9f9529ed91c33afe2b6942')
+
+package() {
+	cd "$srcdir/pd-mapper-$pkgver"
+	make DESTDIR="$pkgdir" prefix=/usr install
+	install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+}

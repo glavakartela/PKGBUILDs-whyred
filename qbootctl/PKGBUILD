@@ -1,0 +1,24 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=qbootctl
+pkgver=20260909
+pkgrel=1
+pkgdesc="Qualcomm bootctrl HAL port for Linux - manage A/B boot slots (UFS/eMMC)"
+arch=('aarch64')
+url="https://github.com/postmarketOS/qbootctl"
+license=('BSD-3-Clause')
+depends=('glibc')
+makedepends=('meson' 'ninja')
+source=("qbootctl-$pkgver.tar.gz")
+sha256sums=('9d528cd911c93273cd26c4938b7cd475ffbbfaa1bf8f6eff9a4358554e895bb6')
+
+build() {
+	cd "$srcdir/qbootctl-$pkgver"
+	arch-meson . build
+	meson compile -C build
+}
+
+package() {
+	cd "$srcdir/qbootctl-$pkgver"
+	meson install -C build --destdir "$pkgdir"
+	install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+}
