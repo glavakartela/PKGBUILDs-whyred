@@ -59,7 +59,9 @@ jobs:
           fetch-depth: 0
       - name: Prepare Arch ARM builder
         run: |
-          pacman -Syu --noconfirm --needed base-devel git sudo
+          pacman-key --init >/dev/null 2>&1 || true
+          pacman-key --populate archlinuxarm >/dev/null 2>&1 || true
+          pacman -Syu --noconfirm --needed base-devel git sudo shadow
           id builder >/dev/null 2>&1 || useradd -m builder
           echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
           chown -R builder "$GITHUB_WORKSPACE"
