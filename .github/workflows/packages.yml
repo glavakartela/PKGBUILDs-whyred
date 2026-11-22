@@ -73,8 +73,23 @@ jobs:
           echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
           chown -R builder "$GITHUB_WORKSPACE"
       - name: Build ${{ matrix.package }}
+        shell: bash
         run: |
-          su builder -c "cd '$GITHUB_WORKSPACE/${{ matrix.package }}' && makepkg -s --noconfirm --needed"
+          set -uo pipefail
+          for attempt in 1 2 3 4 5; do
+            log="/tmp/build-${{ matrix.package }}-$attempt.log"
+            if su builder -c "cd '$GITHUB_WORKSPACE/${{ matrix.package }}' && makepkg -s --noconfirm --needed" 2>&1 | tee "$log"; then
+              exit 0
+            fi
+            if grep -q 'invalid or corrupted package (checksum)' "$log"; then
+              echo "::warning::whyred repository was still updating; retrying in 30s"
+              pacman -Scc --noconfirm >/dev/null 2>&1 || true
+              sleep 30
+              continue
+            fi
+            exit 1
+          done
+          exit 1
       - uses: actions/upload-artifact@v4
         with:
           name: pkg-${{ matrix.package }}
