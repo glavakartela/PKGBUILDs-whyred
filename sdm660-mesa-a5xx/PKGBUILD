@@ -1,5 +1,6 @@
 # Maintainer: Kulesha Evgeniy
-pkgname=mesa-a5xx
+# AutoUpdate: glavakartela/mesa-A5xx master
+pkgname=sdm660-mesa-a5xx
 pkgver=27.0.0
 pkgrel=1
 pkgdesc="Mesa with Adreno 5xx / freedreno fixes for whyred"

@@ -1,0 +1,4 @@
+# mkinitcpio preset for sdm660-linux
+ALL_kver="@KVER@"
+PRESETS=('default')
+default_image="/boot/initramfs-whyred.img"

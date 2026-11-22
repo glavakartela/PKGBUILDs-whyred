@@ -1,6 +1,8 @@
 # Maintainer: Kulesha Evgeniy
-pkgname=libcamera-whyred
+# AutoUpdate: sdm660-mainline/libcamera sdm660-sensors
+pkgname=sdm660-libcamera
 pkgver=0.8.0
+_commit=1cf91b810f117a1738297b9bf72f2f5a5a7172d8
 pkgrel=1
 pkgdesc="libcamera with SDM660 sensor properties (whyred camera stack)"
 arch=('aarch64')
@@ -25,9 +27,9 @@ makedepends=(
 	'python-yaml'
 	'systemd-libs'
 )
-provides=('libcamera')
-conflicts=('libcamera')
-source=("libcamera-whyred::git+https://github.com/sdm660-mainline/libcamera.git#branch=sdm660-sensors")
+provides=('libcamera' 'libcamera-whyred')
+conflicts=('libcamera' 'libcamera-whyred')
+source=("libcamera-whyred::git+https://github.com/sdm660-mainline/libcamera.git#commit=$_commit")
 sha256sums=('SKIP')
 
 build() {

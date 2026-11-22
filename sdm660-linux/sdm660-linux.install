@@ -1,0 +1,12 @@
+post_install() {
+	echo ">>> Building initramfs for sdm660-linux"
+	mkinitcpio -p sdm660-linux
+}
+
+post_upgrade() {
+	post_install
+}
+
+pre_remove() {
+	rm -f /boot/initramfs-whyred.img
+}

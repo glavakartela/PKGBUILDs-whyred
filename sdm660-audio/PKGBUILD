@@ -1,5 +1,5 @@
 # Maintainer: Kulesha Evgeniy
-pkgname=whyred-audio
+pkgname=sdm660-audio
 pkgver=1
 pkgrel=1
 pkgdesc="TAS2557 and microphone routing helpers for whyred"
@@ -15,7 +15,7 @@ source=(
 	50-whyred.conf
 )
 sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
-install=whyred-audio.install
+install=sdm660-audio.install
 
 package() {
 	install -Dm755 whyred-mic-load "$pkgdir/usr/bin/whyred-mic-load"

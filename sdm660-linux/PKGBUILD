@@ -1,0 +1,80 @@
+# Maintainer: Kulesha Evgeniy
+# AutoUpdate: sdm660-mainline/linux qcom-sdm660-7.2.y
+pkgname=sdm660-linux
+pkgver=7.2.3
+pkgrel=1
+pkgdesc="Linux kernel for Xiaomi Redmi Note 5 Pro (whyred) from sdm660-mainline"
+arch=('aarch64')
+url="https://github.com/sdm660-mainline/linux"
+license=('GPL2')
+options=('!strip')
+provides=('linux-qcom-sdm636-whyred')
+conflicts=('sdm660-linux-whyred' 'linux-qcom-sdm636-whyred')
+replaces=('linux-qcom-sdm636-whyred')
+makedepends=(
+	'bc'
+	'bison'
+	'clang'
+	'flex'
+	'lld'
+	'llvm'
+	'openssl'
+	'perl'
+	'python'
+	'uboot-tools'
+	'zstd'
+)
+_commit=5690ded6161e97967f9a5c23cc22a93e022c3c62
+_srcdir="linux-$_commit"
+_flavor=sdm660
+source=(
+	"linux-$_commit.tar.gz::https://github.com/sdm660-mainline/linux/archive/$_commit.tar.gz"
+	"$pkgname.preset"
+)
+sha256sums=('SKIP' 'SKIP')
+install="$pkgname.install"
+
+prepare() {
+	cd "$srcdir/$_srcdir"
+	if ! make ARCH=arm64 LLVM=1 whyred_defconfig; then
+		make ARCH=arm64 LLVM=1 sdm660_defconfig
+	fi
+	make ARCH=arm64 LLVM=1 olddefconfig
+}
+
+build() {
+	cd "$srcdir/$_srcdir"
+	unset LDFLAGS
+	make ARCH=arm64 LLVM=1 \
+		KBUILD_BUILD_VERSION="$pkgrel-$_flavor" \
+		all Image.gz dtbs
+}
+
+package() {
+	cd "$srcdir/$_srcdir"
+
+	make ARCH=arm64 LLVM=1 \
+		modules_install \
+		INSTALL_MOD_PATH="$pkgdir/usr" \
+		INSTALL_MOD_STRIP=1
+
+	_kernver="$(cat include/config/kernel.release)"
+	rm -f "$pkgdir/usr/lib/modules/$_kernver"/{build,source}
+
+	install -Dm644 arch/arm64/boot/Image.gz \
+		"$pkgdir/boot/Image.gz-whyred"
+
+	for _dtb in arch/arm64/boot/dts/qcom/sdm636-xiaomi-whyred-*.dtb; do
+		[ -f "$_dtb" ] || continue
+		install -Dm644 "$_dtb" \
+			"$pkgdir/boot/dtbs/whyred/$(basename "$_dtb")"
+	done
+
+	install -Dm644 include/config/kernel.release \
+		"$pkgdir/usr/share/kernel/$pkgname/kernel.release"
+
+	install -Dm644 "$srcdir/$pkgname.preset" \
+		"$pkgdir/etc/mkinitcpio.d/$pkgname.preset"
+	sed -i "s/@KVER@/$_kernver/" \
+		"$pkgdir/etc/mkinitcpio.d/$pkgname.preset"
+}
