@@ -1,8 +1,8 @@
 # Maintainer: Kulesha Evgeniy
-# AutoUpdate: glavakartela/whyred-mainline 7.2-whyred-drivers-audio
+# AutoUpdate: glavakartela/whyred-mainline qcom-sdm660-7.4.y
 pkgname=sdm660-linux-whyred
-pkgver=7.2.3
-pkgrel=20261122164129
+pkgver=7.4.0
+pkgrel=20261122174341
 pkgdesc="Linux kernel for Xiaomi Redmi Note 5 Pro (whyred) from the whyred-mainline fork"
 arch=('aarch64')
 url="https://github.com/glavakartela/whyred-mainline"
@@ -24,7 +24,7 @@ makedepends=(
 	'uboot-tools'
 	'zstd'
 )
-_commit=4ffdac20764065205e3b96548359efbb9becc727
+_commit=2323bcb8e3f8386902df3f4abd2bce7bfb9023cd
 _srcdir="whyred-mainline-$_commit"
 _flavor=sdm660-whyred
 source=(
