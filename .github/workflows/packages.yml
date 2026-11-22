@@ -110,7 +110,5 @@ jobs:
             echo "no package changes"
             exit 0
           fi
-          git commit -m "CI: update packages
-
-Signed-off-by: Kulesha Evgeniy <voovdop@gmail.com>"
+          git commit -m "CI: update packages" -m "Signed-off-by: Kulesha Evgeniy <voovdop@gmail.com>"
           git push origin main
