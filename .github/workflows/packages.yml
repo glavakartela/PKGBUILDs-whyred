@@ -105,6 +105,7 @@ jobs:
             cp "$p" repo/
             repo-add -p -R repo/whyred.db.tar.gz "repo/$(basename "$p")"
           done
+          rm -f repo/*.old
           git config user.name "Kulesha Evgeniy"
           git config user.email "voovdop@gmail.com"
           git add repo
