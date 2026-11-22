@@ -36,10 +36,11 @@ if ! printf '%s\n' "$sources" | grep -q 'whyred-mic' &&
 		format=s16le rate=48000 channels=1 >/dev/null || true
 fi
 
-if pactl list short sources 2>/dev/null | grep -q 'whyred-mic'; then
-	pactl set-default-source whyred-mic || true
-elif pactl list short sources 2>/dev/null | grep -q 'platform-sound.HiFi__Mic__source'; then
+# Prefer the UCM source; the raw hw:0,1 source is only a fallback.
+if pactl list short sources 2>/dev/null | grep -q 'platform-sound.HiFi__Mic__source'; then
 	pactl set-default-source alsa_input.platform-sound.HiFi__Mic__source || true
+elif pactl list short sources 2>/dev/null | grep -q 'whyred-mic'; then
+	pactl set-default-source whyred-mic || true
 else
 	echo "whyred-mic-load: no capture source found" >&2
 	exit 1
