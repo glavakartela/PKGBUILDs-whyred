@@ -12,7 +12,6 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 | `sdm660-libcamera` | libcamera with SDM660 sensor properties |
 | `sdm660-venus` | Venus playback service, bookmarklet, clipboard watcher |
 | `sdm660-audio` | TAS2557/microphone routing helpers |
-| `sdm660-sensors` | Qualcomm Sensor Core udev rules (accelerometer, light, proximity) |
 
 The CI also rebuilds the existing `device-xiaomi-whyred`,
 `firmware-xiaomi-whyred`, `bootmac`, `buffyboard`, `pd-mapper`,
@@ -71,9 +70,6 @@ Server = https://glavakartela.github.io/whyred-alarm/repo/
   camera stack.
 - `sdm660-venus` installs user units under `/usr/lib/systemd/user`; enable
   them per user.  The Firefox bookmark service is a system unit.
-- `sdm660-sensors` uses the Arch `libssc` and `iio-sensor-proxy` packages.
-  It adds the missing `ssc-proximity` and `ssc-accel` udev tags for the
-  whyred ADSP; test with `ssccli` and `monitor-sensor`.
 - The TAS2557 v4 kernel patches and the whyred DT patch are in the
   `whyred-mainline` branches and `opencode/audio-v4-patches`, not in these
   packages.

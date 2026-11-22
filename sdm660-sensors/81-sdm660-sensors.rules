@@ -1,8 +1,0 @@
-# Qualcomm Sensor Core on the ADSP of the Xiaomi Redmi Note 5 Pro (whyred).
-#
-# The upstream 80-iio-sensor-proxy.rules file only tags the ADSP fastrpc
-# device with ssc-light and ssc-compass.  The same Sensor Core also exposes
-# the accelerometer and proximity sensor, so add those types here.
-
-SUBSYSTEM=="misc", KERNEL=="fastrpc-adsp*", ENV{IIO_SENSOR_PROXY_TYPE}+="ssc-light ssc-proximity ssc-accel ssc-compass"
-SUBSYSTEM=="misc", KERNEL=="fastrpc-adsp*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="iio-sensor-proxy.service"
