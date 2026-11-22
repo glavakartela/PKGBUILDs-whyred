@@ -52,7 +52,7 @@ fi
 
 git -C "$ROOT" config user.name "Kulesha Evgeniy"
 git -C "$ROOT" config user.email "voovdop@gmail.com"
-git -C "$ROOT" add -u
+git -C "$ROOT" add -A
 git -C "$ROOT" commit -F - <<EOF
 CI: update auto-updated packages
 

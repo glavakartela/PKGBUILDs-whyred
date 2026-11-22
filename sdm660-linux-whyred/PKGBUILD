@@ -1,5 +1,5 @@
 # Maintainer: Kulesha Evgeniy
-# AutoUpdate: glavakartela/whyred-mainline qcom-sdm660-7.2.y
+# AutoUpdate: glavakartela/whyred-mainline 7.2-cpu-osm
 pkgname=sdm660-linux-whyred
 pkgver=7.2.3
 pkgrel=20261122135148
@@ -24,7 +24,7 @@ makedepends=(
 	'uboot-tools'
 	'zstd'
 )
-_commit=b70c71c252910a293c5d0dc3ee637ca7b2e26360
+_commit=5c8618f4cd615f4a0cd7ff41a86ab0323eaa5147
 _srcdir="whyred-mainline-$_commit"
 _flavor=sdm660-whyred
 source=(
