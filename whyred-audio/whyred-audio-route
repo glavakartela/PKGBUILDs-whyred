@@ -1,0 +1,41 @@
+#!/bin/sh
+# whyred-audio-route - switch between the TAS2557 speaker and the PM660L
+# earpiece (EAR) on Xiaomi Redmi Note 5/6 Pro (whyred).
+#
+# Usage: whyred-audio-route speaker|earpiece|status
+#
+# The two outputs share MultiMedia1; only the q6routing mixer and the
+# PM660L EAR mux change.  PipeWire can keep running; the mixer change is
+# applied to the active stream immediately.
+set -eu
+
+CARD="${CARD:-0}"
+
+case "${1:-status}" in
+speaker)
+	amixer -q -c "$CARD" cset name='LPI_MI2S_RX_0 Audio Mixer MultiMedia1' 0
+	amixer -q -c "$CARD" cset name='EAR_S' ZERO
+	amixer -q -c "$CARD" cset name='PRI_MI2S_RX Audio Mixer MultiMedia1' 1
+	echo "speaker: TAS2557 (Primary MI2S)"
+	;;
+earpiece)
+	amixer -q -c "$CARD" cset name='PRI_MI2S_RX Audio Mixer MultiMedia1' 0
+	amixer -q -c "$CARD" cset name='LPI_MI2S_RX_0 Audio Mixer MultiMedia1' 1
+	amixer -q -c "$CARD" cset name='EAR_S' Switch
+	# 84 = 0 dB; keep the tiny earpiece at -14 dB by default
+	amixer -q -c "$CARD" cset name='Digital RX1 Digital Volume' 70
+	echo "earpiece: PM660L EAR (LPI MI2S 0)"
+	;;
+status)
+	printf 'PRI MI2S: '
+	amixer -c "$CARD" cget name='PRI_MI2S_RX Audio Mixer MultiMedia1' 2>/dev/null | tail -1
+	printf 'LPI MI2S: '
+	amixer -c "$CARD" cget name='LPI_MI2S_RX_0 Audio Mixer MultiMedia1' 2>/dev/null | tail -1
+	printf 'EAR_S:    '
+	amixer -c "$CARD" cget name='EAR_S' 2>/dev/null | tail -1
+	;;
+*)
+	echo "usage: $0 speaker|earpiece|status" >&2
+	exit 2
+	;;
+esac

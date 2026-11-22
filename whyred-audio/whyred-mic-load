@@ -1,0 +1,46 @@
+#!/bin/sh
+# Configure the whyred microphone and make sure a capture source is available.
+#
+# The card runs the HiFi (Mic, Speaker) UCM profile, so PipeWire already
+# exposes PM660L ADC1 as alsa_input.platform-sound.HiFi__Mic__source.
+# The old raw module-alsa-source fallback is kept for the case where the
+# UCM profile is output-only.
+
+set -eu
+
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
+i=0
+while ! pactl info >/dev/null 2>&1; do
+	i=$((i + 1))
+	[ "$i" -ge 40 ] && exit 1
+	sleep 0.5
+done
+
+# The built-in main microphone is AMIC1 -> ADC1.  Set the analog/digital
+# route explicitly: not every UCM profile runs the Mic sequence.
+CARD="${CARD:-0}"
+amixer -q -c "$CARD" cset name='MultiMedia2 Mixer LPI_MI2S_TX_3' 1 2>/dev/null || true
+amixer -q -c "$CARD" cset name='Digital CIC1 MUX' AMIC 2>/dev/null || true
+amixer -q -c "$CARD" cset name='Digital DEC1 MUX' ADC1 2>/dev/null || true
+amixer -q -c "$CARD" cset name='ADC1 Volume' 8 2>/dev/null || true
+
+sources=$(pactl list short sources 2>/dev/null || true)
+
+# If PipeWire already exposes the UCM capture device, do not open hw:0,1
+# a second time: the raw module would fail with EBUSY.
+if ! printf '%s\n' "$sources" | grep -q 'whyred-mic' &&
+   ! printf '%s\n' "$sources" | grep -q 'platform-sound.HiFi__Mic__source'; then
+	pactl load-module module-alsa-source \
+		device=hw:0,1 source_name=whyred-mic \
+		format=s16le rate=48000 channels=1 >/dev/null || true
+fi
+
+if pactl list short sources 2>/dev/null | grep -q 'whyred-mic'; then
+	pactl set-default-source whyred-mic || true
+elif pactl list short sources 2>/dev/null | grep -q 'platform-sound.HiFi__Mic__source'; then
+	pactl set-default-source alsa_input.platform-sound.HiFi__Mic__source || true
+else
+	echo "whyred-mic-load: no capture source found" >&2
+	exit 1
+fi

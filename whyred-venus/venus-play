@@ -1,0 +1,80 @@
+#!/bin/bash
+# Play a video file or URL through the Venus hardware decoder.
+# YouTube URLs are resolved with yt-dlp; H.264/HEVC/MPEG use the V4L2 M2M
+# decoders exposed by the kernel (/dev/video7).
+set -euo pipefail
+
+input="${1:-}"
+if [ -z "$input" ]; then
+    echo "usage: venus-play <file|url>" >&2
+    exit 2
+fi
+
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
+
+url="$input"
+
+case "$input" in
+    venus://*)
+        url=$(python3 - "$input" <<'PY'
+import sys, urllib.parse
+q = urllib.parse.urlparse(sys.argv[1])
+print(urllib.parse.parse_qs(q.query).get("url", [""])[0])
+PY
+)
+        exec "$0" "$url"
+        ;;
+    *youtube.com/*|*youtu.be/*)
+        q="${VENUS_QUALITY:-}"
+        case "$q" in
+            720|1080)
+                tmp="/tmp/venus-$(date +%s)-${q}.mp4"
+                if ! yt-dlp --no-playlist --no-warnings \
+                    -f "bv*[height<=${q}][vcodec^=avc1]+ba/b[height<=${q}]" \
+                    --merge-output-format mp4 -o "$tmp" "$input"; then
+                    echo "venus-play: yt-dlp download failed" >&2
+                    exit 1
+                fi
+                url="$tmp"
+                downloaded=1
+                ;;
+            *)
+                url=$(yt-dlp --no-playlist --no-warnings \
+                    -f "best[height<=720][vcodec^=avc1]/best[height<=720]" \
+                    -g "$input" 2>/dev/null | head -n1)
+                ;;
+        esac
+        if [ -z "$url" ]; then
+            echo "venus-play: yt-dlp could not resolve $input" >&2
+            exit 1
+        fi
+        ;;
+esac
+
+codec=$(ffprobe -v error -select_streams v:0 \
+    -show_entries stream=codec_name -of default=nw=1:nk=1 "$url" 2>/dev/null | head -n1)
+
+dec=""
+case "$codec" in
+    h264)       dec="h264_v4l2m2m" ;;
+    hevc)       dec="hevc_v4l2m2m" ;;
+    mpeg2video) dec="mpeg2_v4l2m2m" ;;
+    mpeg4)      dec="mpeg4_v4l2m2m" ;;
+    vc1)        dec="vc1_v4l2m2m" ;;
+    h263)       dec="h263_v4l2m2m" ;;
+esac
+
+echo "venus-play: codec=$codec decoder=${dec:-software}" >&2
+
+args=(-autoexit -fs -hide_banner -loglevel error -nostats -window_title "Venus: ${codec:-video}")
+[ -n "$dec" ] && args+=(-vcodec "$dec")
+
+if [ "${downloaded:-0}" = 1 ]; then
+    ffplay "${args[@]}" "$url"
+    rc=$?
+    rm -f "$url"
+    exit $rc
+fi
+
+exec ffplay "${args[@]}" "$url"

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Read a newly copied URL and hand video pages to the local Venus service.
+url=$(cat)
+case "$url" in
+  *youtube.com/watch*|*youtu.be/*|*vimeo.com/*)
+    enc=$(printf "%s" "$url" | python3 -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read().strip(), safe=""))')
+    curl -fsS --max-time 5 "http://127.0.0.1:8765/play?url=$enc" >/dev/null 2>&1 || true
+    ;;
+esac

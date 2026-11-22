@@ -1,0 +1,12 @@
+[Unit]
+Description=Install the Venus bookmarklet in Firefox policies
+After=local-fs.target
+Before=graphical.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/venus-firefox-bookmark
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,39 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=whyred-venus
+pkgver=1
+pkgrel=1
+pkgdesc="Venus hardware video playback helpers and services for whyred"
+arch=('aarch64')
+url="https://github.com/glavakartela/PKGBUILDs-whyred"
+license=('MIT')
+depends=('python' 'ffmpeg' 'yt-dlp' 'curl' 'wl-clipboard')
+optdepends=('firefox: "Play with Venus" bookmarklet')
+source=(
+	venus-play
+	venus-video-daemon
+	venus-firefox-bookmark
+	venus-clipboard
+	venus-video.service
+	venus-clipboard.service
+	venus-firefox-bookmark.service
+	venus-video.desktop
+)
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+install=whyred-venus.install
+
+package() {
+	install -Dm755 venus-play "$pkgdir/usr/bin/venus-play"
+	install -Dm755 venus-video-daemon "$pkgdir/usr/bin/venus-video-daemon"
+	install -Dm755 venus-firefox-bookmark "$pkgdir/usr/bin/venus-firefox-bookmark"
+	install -Dm755 venus-clipboard "$pkgdir/usr/bin/venus-clipboard"
+
+	install -Dm644 venus-video.service \
+		"$pkgdir/usr/lib/systemd/user/venus-video.service"
+	install -Dm644 venus-clipboard.service \
+		"$pkgdir/usr/lib/systemd/user/venus-clipboard.service"
+	install -Dm644 venus-firefox-bookmark.service \
+		"$pkgdir/usr/lib/systemd/system/venus-firefox-bookmark.service"
+
+	install -Dm644 venus-video.desktop \
+		"$pkgdir/usr/share/applications/venus-video.desktop"
+}

@@ -1,0 +1,11 @@
+[Unit]
+Description=Play copied video URLs with Venus
+After=venus-video.service
+
+[Service]
+ExecStart=/usr/bin/wl-paste --watch /usr/bin/venus-clipboard
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,50 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=libcamera-whyred
+pkgver=0.8.0
+pkgrel=1
+pkgdesc="libcamera with SDM660 sensor properties (whyred camera stack)"
+arch=('aarch64')
+url="https://github.com/sdm660-mainline/libcamera"
+license=('LGPL-2.1-or-later' 'GPL-2.0-or-later')
+depends=(
+	'glibc'
+	'libdrm'
+	'libevent'
+	'libgcc'
+	'libstdc++'
+	'libyaml'
+	'openssl'
+	'systemd-libs'
+)
+makedepends=(
+	'meson'
+	'ninja'
+	'python-jinja'
+	'python-ply'
+	'python-yaml'
+	'systemd-libs'
+)
+provides=('libcamera')
+conflicts=('libcamera')
+source=("libcamera-whyred::git+https://github.com/sdm660-mainline/libcamera.git#branch=sdm660-sensors")
+sha256sums=('SKIP')
+
+build() {
+	cd libcamera-whyred
+	meson setup build . \
+		--buildtype=release \
+		-Dpipelines=simple \
+		-Dipas=softisp \
+		-Dv4l2=enabled \
+		-Dgstreamer=disabled \
+		-Dqcam=disabled \
+		-Dpycamera=disabled \
+		-Ddocumentation=disabled \
+		-Dtest=false
+	meson compile -C build
+}
+
+package() {
+	cd libcamera-whyred
+	DESTDIR="$pkgdir" meson install --no-rebuild -C build
+}

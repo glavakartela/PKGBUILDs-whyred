@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Venus Player
+Comment=Play video through the Venus hardware decoder
+Exec=/usr/bin/venus-play %U
+Terminal=false
+MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;x-scheme-handler/venus;
+Categories=AudioVideo;Player;

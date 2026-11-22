@@ -1,0 +1,27 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=whyred-audio
+pkgver=1
+pkgrel=1
+pkgdesc="TAS2557 and microphone routing helpers for whyred"
+arch=('aarch64')
+url="https://github.com/glavakartela/PKGBUILDs-whyred"
+license=('MIT')
+depends=('alsa-utils' 'pipewire-pulse')
+optdepends=('device-xiaomi-whyred: UCM profile for the sdm660 sound card')
+source=(
+	whyred-mic-load
+	whyred-mic.service
+	whyred-audio-route
+	50-whyred.conf
+)
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')
+install=whyred-audio.install
+
+package() {
+	install -Dm755 whyred-mic-load "$pkgdir/usr/bin/whyred-mic-load"
+	install -Dm755 whyred-audio-route "$pkgdir/usr/bin/whyred-audio-route"
+	install -Dm644 whyred-mic.service \
+		"$pkgdir/usr/lib/systemd/user/whyred-mic.service"
+	install -Dm644 50-whyred.conf \
+		"$pkgdir/etc/alsa/conf.d/50-whyred.conf"
+}

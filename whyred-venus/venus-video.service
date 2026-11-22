@@ -1,0 +1,12 @@
+[Unit]
+Description=Venus hardware video playback service
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/venus-video-daemon
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

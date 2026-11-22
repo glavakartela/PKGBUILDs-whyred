@@ -1,0 +1,13 @@
+[Unit]
+Description=whyred microphone routing and default source
+After=pipewire.service wireplumber.service pipewire-pulse.service
+Wants=pipewire.service
+PartOf=pipewire.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/whyred-mic-load
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target
