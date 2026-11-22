@@ -25,6 +25,7 @@ depends=(
 )
 makedepends=(
 	'expat'
+	'glslang'
 	'libarchive'
 	'libdisplay-info'
 	'libdrm'

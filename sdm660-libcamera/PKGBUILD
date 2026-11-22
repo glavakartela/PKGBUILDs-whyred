@@ -43,7 +43,8 @@ build() {
 		-Dqcam=disabled \
 		-Dpycamera=disabled \
 		-Ddocumentation=disabled \
-		-Dtest=false
+		-Dtest=false \
+		-Dwerror=false
 	meson compile -C build
 }
 
