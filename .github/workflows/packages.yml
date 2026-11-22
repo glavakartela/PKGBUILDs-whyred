@@ -103,7 +103,7 @@ jobs:
             pkgname="$(bsdtar -xOf "$p" .PKGINFO | awk -F' = ' '/^pkgname = /{print $2}')"
             rm -f repo/"${pkgname}-"*.pkg.tar.*
             cp "$p" repo/
-            repo-add -R repo/whyred.db.tar.gz "repo/$(basename "$p")"
+            repo-add -p -R repo/whyred.db.tar.gz "repo/$(basename "$p")"
           done
           git config user.name "Kulesha Evgeniy"
           git config user.email "voovdop@gmail.com"
