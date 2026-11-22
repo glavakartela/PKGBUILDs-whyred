@@ -30,13 +30,16 @@ _flavor=sdm660-whyred
 source=(
 	"whyred-mainline-$_commit.tar.gz::https://github.com/glavakartela/whyred-mainline/archive/$_commit.tar.gz"
 	"$pkgname.preset"
+	config-sdm660-linux-whyred.aarch64
 )
-sha256sums=('SKIP' 'SKIP')
+sha256sums=('SKIP' 'SKIP' 'd58fa189bcc41feb1032d5922e951f762e1db58686b55b1f51e3505d46779036')
 install="$pkgname.install"
 
 prepare() {
 	cd "$srcdir/$_srcdir"
-	if ! make ARCH=arm64 LLVM=1 whyred_defconfig; then
+	if [ -f "$srcdir/config-sdm660-linux-whyred.aarch64" ]; then
+		cp "$srcdir/config-sdm660-linux-whyred.aarch64" .config
+	elif ! make ARCH=arm64 LLVM=1 whyred_defconfig; then
 		make ARCH=arm64 LLVM=1 sdm660_defconfig
 	fi
 	make ARCH=arm64 LLVM=1 olddefconfig
