@@ -13,6 +13,10 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 | `sdm660-venus` | Venus playback service, bookmarklet, clipboard watcher |
 | `sdm660-audio` | TAS2557/microphone routing helpers |
 
+The CI also rebuilds the existing `device-xiaomi-whyred`,
+`firmware-xiaomi-whyred`, `bootmac`, `buffyboard`, `pd-mapper`,
+`qbootctl`, `qcom-diag`, `qrtr`, `rmtfs` and `tqftpserv` packages.
+
 ## Build
 
 ```sh
@@ -40,15 +44,17 @@ are updated by `scripts/autoupdate.sh`: `_commit` is replaced with the
 branch head, `pkgrel` gets a UTC timestamp, and the change is committed
 with `[skip ci]`.
 
-The GitHub Actions workflow builds the packages in an Arch Linux ARM
-container on `ubuntu-24.04-arm`, then publishes them to
+The GitHub Actions workflow discovers every directory with a `PKGBUILD`,
+builds it in an Arch Linux ARM container on `ubuntu-24.04-arm`, then
+publishes the packages to
 <https://github.com/glavakartela/whyred-alarm> (GitHub Pages pacman
 repository).
 
 Create a fine-grained PAT with **Contents: read/write** on
 `glavakartela/whyred-alarm` and add it as the repository secret
 `WHYRED_ALARM_TOKEN`.  The workflow uses the normal `GITHUB_TOKEN` for
-auto-update commits in this repository.
+auto-update commits in this repository.  Scheduled runs happen every six
+hours; a push to `main` triggers a build too.
 
 Pacman:
 
