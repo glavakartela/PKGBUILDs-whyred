@@ -46,6 +46,7 @@ makedepends=(
 	'wayland-protocols'
 	'zlib'
 )
+optdepends=('vkmark: Vulkan scene/lighting stress test')
 provides=('mesa' 'opengl-driver' 'vulkan-freedreno' 'mesa-a5xx-test')
 conflicts=('mesa' 'mesa-a5xx-test' 'vulkan-freedreno')
 options=('!strip')
