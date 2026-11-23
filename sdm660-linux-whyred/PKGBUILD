@@ -2,7 +2,7 @@
 # AutoUpdate: glavakartela/whyred-mainline qcom-sdm660-7.4.y
 pkgname=sdm660-linux-whyred
 pkgver=7.4.0
-pkgrel=20261122174341
+pkgrel=20261123180100
 pkgdesc="Linux kernel for Xiaomi Redmi Note 5 Pro (whyred) from the whyred-mainline fork"
 arch=('aarch64')
 url="https://github.com/glavakartela/whyred-mainline"
@@ -24,7 +24,7 @@ makedepends=(
 	'uboot-tools'
 	'zstd'
 )
-_commit=2323bcb8e3f8386902df3f4abd2bce7bfb9023cd
+_commit=ed9704a445a15f6922276d2704b773c3d0fa42be
 _srcdir="whyred-mainline-$_commit"
 _flavor=sdm660-whyred
 source=(
