@@ -1,7 +1,7 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=firmware-xiaomi-whyred
 pkgver=6
-pkgrel=3
+pkgrel=4
 pkgdesc="Firmware files for Xiaomi Redmi Note 5 Pro (whyred)"
 url="https://postmarketos.org"
 arch=('aarch64')
@@ -12,11 +12,13 @@ source=(
 	"$pkgname-$_commit.tar.gz::https://github.com/glavakartela/postmarketos-vendor-xiaomi-whyred/archive/$_commit.tar.gz"
 	"ath10k-fw-features.py"
 	"sns.reg-xiaomi,whyred-shenchao"
+	"tas2557_uCDSP-stock.bin"
 )
 sha256sums=(
 	'SKIP'
 	'bd6d49fb29c677a730fa8b836233c2239d98ee3c81cd428fa877b99c25844497'
 	'64db548bac4818d4b0230e04cebe092294e9857fd49159828305e2a869ed7343'
+	'ef949fb0f56066cda11f35f7adb6372af4c02fc70a5c25f299c5c7c443af89b2'
 )
 
 prepare() {
@@ -78,6 +80,9 @@ package() {
 	find speakeramp -type f | while read -r f; do
 		install -Dm644 "$f" "$_fwdir/$f"
 	done
+	# Stock whyred TAS2557 uCDSP firmware (hardware amp tuning)
+	install -Dm644 "$srcdir/tas2557_uCDSP-stock.bin" \
+		"$_fwdir/speakeramp/tas2557_uCDSP.bin"
 
 	# --- QCA Bluetooth ---
 	find qca -type f | while read -r f; do
