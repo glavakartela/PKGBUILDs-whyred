@@ -1,15 +1,31 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=firmware-xiaomi-whyred
 pkgver=6
-pkgrel=1
+pkgrel=2
 pkgdesc="Firmware files for Xiaomi Redmi Note 5 Pro (whyred)"
 url="https://postmarketos.org"
 arch=('aarch64')
 license=('custom:proprietary')
 options=('!strip')
 _commit="a00c3503abab8becfc742077ad00a48060fb15d3"
-source=("$pkgname-$_commit.tar.gz::https://github.com/glavakartela/postmarketos-vendor-xiaomi-whyred/archive/$_commit.tar.gz")
-sha256sums=('SKIP')
+source=(
+	"$pkgname-$_commit.tar.gz::https://github.com/glavakartela/postmarketos-vendor-xiaomi-whyred/archive/$_commit.tar.gz"
+	"ath10k-fw-features.py"
+)
+sha256sums=('SKIP' 'bd6d49fb29c677a730fa8b836233c2239d98ee3c81cd428fa877b99c25844497')
+
+prepare() {
+	cd "postmarketos-vendor-xiaomi-whyred-$_commit"
+
+	# WCN3990 loads its firmware externally (NON_BMI), so firmware-5.bin is
+	# only a metadata container.  Set the feature bits that make ath10k work
+	# around the firmware bugs fixed in the 7.4 whyred branch:
+	#   23 ATH10K_FW_FEATURE_NO_CHAN_STAT_EVENT
+	#   24 ATH10K_FW_FEATURE_NO_QUIET_MODE
+	#   25 ATH10K_FW_FEATURE_PASSIVE_SCAN_5GHZ
+	python3 "$srcdir/ath10k-fw-features.py" \
+		ath10k/WCN3990/hw1.0/firmware-5.bin 23 24 25
+}
 
 package() {
 	cd "postmarketos-vendor-xiaomi-whyred-$_commit"
