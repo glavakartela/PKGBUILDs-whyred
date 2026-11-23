@@ -1,7 +1,7 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=firmware-xiaomi-whyred
 pkgver=6
-pkgrel=2
+pkgrel=3
 pkgdesc="Firmware files for Xiaomi Redmi Note 5 Pro (whyred)"
 url="https://postmarketos.org"
 arch=('aarch64')
@@ -11,8 +11,13 @@ _commit="a00c3503abab8becfc742077ad00a48060fb15d3"
 source=(
 	"$pkgname-$_commit.tar.gz::https://github.com/glavakartela/postmarketos-vendor-xiaomi-whyred/archive/$_commit.tar.gz"
 	"ath10k-fw-features.py"
+	"sns.reg-xiaomi,whyred-shenchao"
 )
-sha256sums=('SKIP' 'bd6d49fb29c677a730fa8b836233c2239d98ee3c81cd428fa877b99c25844497')
+sha256sums=(
+	'SKIP'
+	'bd6d49fb29c677a730fa8b836233c2239d98ee3c81cd428fa877b99c25844497'
+	'64db548bac4818d4b0230e04cebe092294e9857fd49159828305e2a869ed7343'
+)
 
 prepare() {
 	cd "postmarketos-vendor-xiaomi-whyred-$_commit"
@@ -46,11 +51,23 @@ package() {
 	install -Dm644 adsps.jsn  -t "$_fwdir/qcom/"
 	install -Dm644 adspua.jsn -t "$_fwdir/qcom/"
 	install -Dm644 adsp.mbn   -t "$_fwdir/qcom/"
+	# The mainline PAS driver asks for the split .mdt name; the vendor image
+	# is a monolithic ELF .mbn, which qcom_mdt_load can load as-is.
+	ln -sf adsp.mbn "$_fwdir/qcom/adsp.mdt"
 
 	# --- Modem ---
 	install -Dm644 modemr.jsn  -t "$_fwdir/qcom/"
 	install -Dm644 modemuw.jsn -t "$_fwdir/qcom/"
 	install -Dm644 modem.mbn   -t "$_fwdir/qcom/"
+	ln -sf modem.mbn "$_fwdir/qcom/modem.mdt"
+
+	# --- Sensor registry (ADSP SSC) ---
+	install -Dm644 "$srcdir/sns.reg-xiaomi,whyred-shenchao" \
+		"$_fwdir/qcom/sensors/sns.reg-xiaomi,whyred-shenchao"
+	for _panel in huaxing-nt36672 tianma tianma-nt36672; do
+		ln -sf "sns.reg-xiaomi,whyred-shenchao" \
+			"$_fwdir/qcom/sensors/sns.reg-xiaomi,whyred-$_panel"
+	done
 
 	# --- MBA / WLAN / QDSP6 ---
 	install -Dm644 mba.mbn      -t "$_fwdir/qcom/"
