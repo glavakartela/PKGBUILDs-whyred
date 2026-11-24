@@ -162,7 +162,12 @@ for dir in "${PACKAGES[@]}"; do
 		echo "no package file produced for $dir" >&2
 		exit 1
 	fi
-	cp -f "${pkgfiles[@]}" "$ARTIFACTS/"
+	# GitHub Actions artifact names cannot contain a colon, which
+	# appears in package filenames when a package has an epoch.
+	for _pkgfile in "${pkgfiles[@]}"; do
+		_name="$(basename "$_pkgfile")"
+		cp -f "$_pkgfile" "$ARTIFACTS/${_name//:/_}"
+	done
 	if [ "${INSTALL[$dir]:-0}" -eq 1 ]; then
 		if [ "$dir" = "sdm660-linux-whyred" ]; then
 			pacman -Rdd --noconfirm linux-qcom-sdm636-whyred sdm660-linux \
