@@ -1,4 +1,5 @@
 # Maintainer: Kulesha Evgeniy
+# AutoUpdate: linux-msm/diag master
 pkgname=qcom-diag
 pkgver=0.git20250324
 pkgrel=1

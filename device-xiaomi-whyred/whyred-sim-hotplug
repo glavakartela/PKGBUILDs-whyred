@@ -1,0 +1,25 @@
+#!/bin/sh
+# Watch slot 1 card state and reinitialize ModemManager when the SIM is
+# inserted or removed.  whyred-uim-select runs before ModemManager and
+# activates the primary GW provisioning session.
+set -u
+
+last=
+
+while :; do
+	out=$(qmicli -d qrtr://0 --uim-get-card-status 2>/dev/null || true)
+	state=$(printf '%s\n' "$out" |
+		sed -n "/Slot \[1\]/,/Slot \[2\]/p" |
+		sed -n "s/.*Card state: '\([^']*\)'.*/\1/p" |
+		head -n1)
+	if [ -n "$state" ]; then
+		if [ -z "$last" ]; then
+			last=$state
+		elif [ "$state" != "$last" ]; then
+			logger -t whyred-sim "slot 1 card state: $last -> $state; restarting ModemManager"
+			systemctl restart ModemManager
+			last=$state
+		fi
+	fi
+	sleep 5
+done

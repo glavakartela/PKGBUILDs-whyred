@@ -63,5 +63,6 @@ Signed-off-by: Kulesha Evgeniy <voovdop@gmail.com>
 EOF
 
 if [ "$PUSH" -eq 1 ]; then
-	git -C "$ROOT" push origin HEAD:main
+	branch="${GITHUB_REF_NAME:-main}"
+	git -C "$ROOT" push origin "HEAD:$branch"
 fi

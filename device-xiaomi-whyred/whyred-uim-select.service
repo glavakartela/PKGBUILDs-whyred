@@ -1,0 +1,13 @@
+[Unit]
+Description=Whyred UIM primary GW session selection
+Before=ModemManager.service
+After=rmtfs.service
+Wants=rmtfs.service
+
+[Service]
+Type=oneshot
+ExecStart=-/usr/local/bin/whyred-uim-select
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

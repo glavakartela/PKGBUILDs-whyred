@@ -1,6 +1,6 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=device-xiaomi-whyred
-pkgver=3
+pkgver=4
 pkgrel=1
 pkgdesc="configuration for Xiaomi Redmi Note 5 Pro "
 url="https://postmarketos.org"
@@ -8,7 +8,7 @@ arch=('aarch64')
 license=('MIT' 'BSD-3-Clause' 'GPL3')
 depends=(
 	'firmware-xiaomi-whyred'
-	'linux-qcom-sdm636-whyred'
+	'sdm660-linux-whyred'
 	'systemd'
 	'libqmi'
 	'dbus'
@@ -30,11 +30,12 @@ optdepends=(
 	'vulkan-icd-loader: Vulkan support for the freedreno GPU driver'
 )
 
-makedepends=('meson' 'ninja')
+makedepends=('meson' 'ninja' 'gcc')
 backup=(
 	'etc/UPower/UPower.conf'
 	'usr/share/wireplumber/wireplumber.conf.d/51-qcom.conf'
 	'usr/lib/environment.d/50-soc-qcom-gstreamer.conf'
+	'etc/whyred-autobrightness.conf'
 )
 options=('!strip')
 _alsaucm_commit="d64f7831da66e053dbd80e1c387763e191f77173"
@@ -63,6 +64,15 @@ source=(
 	msm-firmware-loader-LICENSE
 	extlinux.conf.example
 	mkinitcpio-modules.md
+	whyred-uim-select
+	whyred-uim-select.service
+	whyred-modem-uim.conf
+	whyred-sim-hotplug
+	whyred-sim-hotplug.service
+	whyred-autobrightness
+	whyred-autobrightness.conf
+	whyred-autobrightness.service
+	whyred-backlight-fade.c
 )
 sha256sums=('e59f1e0781ebbc6aeceb3911b738e85115974eb2da0d37541bde5e4c04ca84ed'
             '9da2f04629ced10835574da7e88a5277bece1d0fc66d456bf487b50b0fb720fa'
@@ -75,7 +85,16 @@ sha256sums=('e59f1e0781ebbc6aeceb3911b738e85115974eb2da0d37541bde5e4c04ca84ed'
             '8241156c052014298e628ac586781f7610d1fd0d5c6ce062dc0d677ab9798dda'
             'bf6331a27a72d0bf847c872319a24c202d66e1d9027d2ffbc8a660fd0a679506'
             '6fdacfcfe46698f37ec4e84c1d2aea79530cf2f7f1d6fa486f92ae2b22ead3ed'
-            'SKIP' 'SKIP')
+            'SKIP' 'SKIP'
+            'f8713227597fa31483423a61987a5cb3ba045994d673a7473e2143a663334ff5'
+            'd0c0ac759fa8db38a3351d5393b75e6d0d142ae929c8c4969f3b21ae0e18682a'
+            'd84a0576af4029546dd63b11b0b9a4a6d7a115440d06136e2492c389f0bc8807'
+            'e1813bae8a683bf479544a910cd8224a6a1afd027e1ef3829d9b222521386021'
+            '27a34372eb9f845fe92da214b49181859dd191862346ddc3641d23ebda200fa3'
+            'a9d42ae41c318b01b0a8d21967236717fb766ff82da72b03c9667e7b3472cc9e'
+            'adb72dd9182bd6fdfe177a4e5d08b1fc99b2699f7099cb82e26a73aaf6c6d1bf'
+            'a485194ca015ace7353fc7c7f848a59fc2509e89d13ab393115421ebe8f65eaf'
+            '3b70a14d16d60590dfd708592de2983a77aabf0f0f8a1baa14b6d12974b69054')
 
 build() {
 	cd "$srcdir/msm-modem-13"
@@ -91,6 +110,9 @@ build() {
 	cd "q6voiced-$_q6voicedver"
 	arch-meson . build -Dopenrc=disabled -Dsystemd=enabled
 	meson compile -C build
+	cd "$srcdir"
+
+	cc -O2 -s -o whyred-backlight-fade whyred-backlight-fade.c
 }
 
 package() {
@@ -162,4 +184,32 @@ package() {
 		-t "$pkgdir/usr/share/doc/$pkgname/"
 	install -Dm644 mkinitcpio-modules.md \
 		-t "$pkgdir/usr/share/doc/$pkgname/"
+
+	# Modem UIM session selection and SIM hotplug handling.
+	install -Dm755 whyred-uim-select \
+		"$pkgdir/usr/local/bin/whyred-uim-select"
+	install -Dm644 whyred-uim-select.service \
+		-t "$pkgdir/usr/lib/systemd/system"
+	install -Dm644 whyred-modem-uim.conf \
+		"$pkgdir/usr/lib/systemd/system/ModemManager.service.d/whyred-uim.conf"
+	install -Dm755 whyred-sim-hotplug \
+		"$pkgdir/usr/local/bin/whyred-sim-hotplug"
+	install -Dm644 whyred-sim-hotplug.service \
+		-t "$pkgdir/usr/lib/systemd/system"
+
+	# Ambient-light backlight control.
+	install -Dm755 whyred-autobrightness \
+		"$pkgdir/usr/local/bin/whyred-autobrightness"
+	install -Dm755 "$srcdir/whyred-backlight-fade" \
+		"$pkgdir/usr/local/bin/whyred-backlight-fade"
+	install -Dm644 whyred-autobrightness.conf \
+		"$pkgdir/etc/whyred-autobrightness.conf"
+	install -Dm644 whyred-autobrightness.service \
+		-t "$pkgdir/usr/lib/systemd/system"
+
+	install -d "$pkgdir/usr/lib/systemd/system/multi-user.target.wants"
+	for _unit in whyred-uim-select whyred-sim-hotplug whyred-autobrightness; do
+		ln -sf "../$_unit.service" \
+			"$pkgdir/usr/lib/systemd/system/multi-user.target.wants/$_unit.service"
+	done
 }

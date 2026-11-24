@@ -1,5 +1,5 @@
 # Maintainer: Kulesha Evgeniy
-# AutoUpdate: glavakartela/whyred-mainline qcom-sdm660-7.4.y
+# AutoUpdate: glavakartela/whyred-mainline 7.4.y-gpu-ipa-whyred
 pkgname=sdm660-linux-whyred
 pkgver=7.4.0
 pkgrel=20261123203847

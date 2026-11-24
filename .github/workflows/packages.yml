@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "0 */6 * * *"
   workflow_dispatch:
+    inputs:
+      force_all:
+        description: "Rebuild every package, even if the repository already has it"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -19,93 +24,95 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.update.outputs.changed }}
+      packages: ${{ steps.update.outputs.packages }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Auto-update package commits
         id: update
+        shell: bash
         run: |
+          set -euo pipefail
           before="$(git rev-parse HEAD)"
           ./scripts/autoupdate.sh --push
           after="$(git rev-parse HEAD)"
-          if [ "$before" = "$after" ]; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+
+          changed=""
+          if [ "$before" != "$after" ]; then
+            changed="$(git diff --name-only "$before" "$after" |
+              awk -F/ '$2 == "PKGBUILD" { print $1 }' |
+              sort -u | tr '\n' ' ')"
           fi
 
-  packages:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Discover package directories
-        id: set
-        run: |
-          matrix="$(find . -mindepth 2 -maxdepth 2 -name PKGBUILD -printf '%h\n' | sed 's|^\./||' | sort | jq -R -s -c 'split("\n")|map(select(length>0))')"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          event_before="${{ github.event.before }}"
+          if [ -n "$event_before" ] &&
+             [ "$event_before" != "0000000000000000000000000000000000000000" ]; then
+            push_changed="$(git diff --name-only "$event_before" "$after" 2>/dev/null |
+              awk -F/ '$2 == "PKGBUILD" { print $1 }' |
+              sort -u | tr '\n' ' ' || true)"
+            changed="$changed $push_changed"
+          fi
+
+          changed="$(printf '%s\n' $changed | sort -u | tr '\n' ' ')"
+          echo "packages=$changed" >> "$GITHUB_OUTPUT"
+          if [ -n "$changed" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
   build:
-    needs: [update, packages]
+    needs: [update]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 360
     container:
       image: menci/archlinuxarm:latest
       options: --privileged
-    strategy:
-      fail-fast: false
-      matrix:
-        package: ${{ fromJSON(needs.packages.outputs.matrix) }}
+    outputs:
+      built: ${{ steps.build.outputs.built }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
       - name: Prepare Arch ARM builder
         run: |
           pacman-key --init >/dev/null 2>&1 || true
           pacman-key --populate archlinuxarm >/dev/null 2>&1 || true
           printf '%s\n' '[whyred]' 'SigLevel = Optional' 'Server = https://glavakartela.github.io/whyred-alarm/repo/' >> /etc/pacman.conf
-          pacman -Syu --noconfirm --needed base-devel git sudo shadow
+          pacman -Syu --noconfirm --needed base-devel git sudo shadow mkinitcpio
           id builder >/dev/null 2>&1 || useradd -m builder
           echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
           chown -R builder "$GITHUB_WORKSPACE"
-      - name: Build ${{ matrix.package }}
+      - name: Build changed or missing packages
+        id: build
         shell: bash
         run: |
-          set -uo pipefail
-          for attempt in 1 2 3 4 5; do
-            log="/tmp/build-${{ matrix.package }}-$attempt.log"
-            if su builder -c "cd '$GITHUB_WORKSPACE/${{ matrix.package }}' && makepkg -s --noconfirm --needed" 2>&1 | tee "$log"; then
-              exit 0
-            fi
-            if grep -q 'invalid or corrupted package (checksum)' "$log"; then
-              echo "::warning::whyred repository was still updating; retrying in 30s"
-              pacman -Scc --noconfirm >/dev/null 2>&1 || true
-              sleep 30
-              continue
-            fi
-            exit 1
-          done
-          exit 1
+          set -euo pipefail
+          args=(--changed "${{ needs.update.outputs.packages }}"
+                --artifacts "$GITHUB_WORKSPACE/artifacts")
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] &&
+             [ "${{ inputs.force_all }}" = "true" ]; then
+            args+=(--force-all)
+          fi
+          bash scripts/ci-build.sh "${args[@]}"
       - uses: actions/upload-artifact@v4
         with:
-          name: pkg-${{ matrix.package }}
-          path: ${{ matrix.package }}/*.pkg.tar.*
-          if-no-files-found: error
+          name: whyred-packages
+          path: artifacts/
+          if-no-files-found: ignore
 
   publish:
-    needs: build
+    needs: [build]
+    if: needs.build.outputs.built != '0' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: pkg-*
-          merge-multiple: true
+          name: whyred-packages
           path: pkgs
       - name: Publish to whyred-alarm
         env:
@@ -122,6 +129,10 @@ jobs:
           cd repo
           shopt -s nullglob
           for p in ../pkgs/*.pkg.tar.*; do
+            if ! bsdtar -tf "$p" >/dev/null 2>&1; then
+              echo "corrupt package artifact: $p" >&2
+              exit 1
+            fi
             pkgname="$(bsdtar -xOf "$p" .PKGINFO | awk -F' = ' '/^pkgname = /{print $2}')"
             rm -f repo/"${pkgname}-"*.pkg.tar.*
             cp "$p" repo/

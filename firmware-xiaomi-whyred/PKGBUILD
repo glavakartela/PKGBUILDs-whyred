@@ -1,4 +1,5 @@
 # Maintainer: Kulesha Evgeniy
+# AutoUpdate: glavakartela/postmarketos-vendor-xiaomi-whyred main1
 pkgname=firmware-xiaomi-whyred
 pkgver=6
 pkgrel=5

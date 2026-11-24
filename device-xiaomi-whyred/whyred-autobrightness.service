@@ -1,0 +1,14 @@
+[Unit]
+Description=Whyred ambient-light backlight control
+After=iio-sensor-proxy.service
+Wants=iio-sensor-proxy.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/whyred-autobrightness
+Restart=always
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

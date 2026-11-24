@@ -1,0 +1,13 @@
+[Unit]
+Description=Whyred SIM hotplug watcher
+After=ModemManager.service
+Wants=ModemManager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/whyred-sim-hotplug
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
