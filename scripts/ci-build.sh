@@ -83,12 +83,13 @@ done < <(find "$ROOT" -mindepth 2 -maxdepth 2 -name PKGBUILD -printf '%h\n' |
 	sed "s|^$ROOT/||" | sort)
 
 pkg_meta() {
-	local pkgbuild="$1" name ver rel
+	local pkgbuild="$1" name ver rel ep
 	(
 		set +u
 		# shellcheck disable=SC1090
 		. "$pkgbuild" >/dev/null 2>&1
-		printf '%s\t%s\t%s\n' "${pkgname[0]:-}" "${pkgver:-}" "${pkgrel:-}"
+		printf '%s\t%s\t%s\t%s\n' \
+			"${pkgname[0]:-}" "${pkgver:-}" "${pkgrel:-}" "${epoch:-}"
 	) 2>/dev/null
 }
 
@@ -104,13 +105,13 @@ for dir in "${PACKAGES[@]}"; do
 	pkgbuild="$ROOT/$dir/PKGBUILD"
 	[ -f "$pkgbuild" ] || continue
 
-	IFS=$'\t' read -r name ver rel < <(pkg_meta "$pkgbuild")
+	IFS=$'\t' read -r name ver rel ep < <(pkg_meta "$pkgbuild")
 	if [ -z "$name" ] || [ -z "$ver" ] || [ -z "$rel" ]; then
 		echo "cannot parse $pkgbuild" >&2
 		exit 1
 	fi
 
-	full="$ver-$rel"
+	full="${ep:+$ep:}$ver-$rel"
 	repo="$(repo_version "$name")"
 	need=0
 

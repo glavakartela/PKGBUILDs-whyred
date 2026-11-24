@@ -1,24 +1,27 @@
 # Maintainer: Kulesha Evgeniy
+# AutoUpdate: linux-msm/qbootctl main
 pkgname=qbootctl
-pkgver=20260909
+pkgver=0.2.2
 pkgrel=1
+epoch=1
 pkgdesc="Qualcomm bootctrl HAL port for Linux - manage A/B boot slots (UFS/eMMC)"
 arch=('aarch64')
-url="https://github.com/postmarketOS/qbootctl"
+url="https://github.com/linux-msm/qbootctl"
 license=('BSD-3-Clause')
 depends=('glibc')
 makedepends=('meson' 'ninja')
-source=("qbootctl-$pkgver.tar.gz")
-sha256sums=('9d528cd911c93273cd26c4938b7cd475ffbbfaa1bf8f6eff9a4358554e895bb6')
+_commit=39a6e6daaf029fb0a083777679a15ea2c18f72de
+source=("qbootctl-$_commit.tar.gz::https://github.com/linux-msm/qbootctl/archive/$_commit.tar.gz")
+sha256sums=('SKIP')
 
 build() {
-	cd "$srcdir/qbootctl-$pkgver"
+	cd "$srcdir/qbootctl-$_commit"
 	arch-meson . build
 	meson compile -C build
 }
 
 package() {
-	cd "$srcdir/qbootctl-$pkgver"
+	cd "$srcdir/qbootctl-$_commit"
 	meson install -C build --destdir "$pkgdir"
 	install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
 }
