@@ -142,11 +142,11 @@ for dir in "${PACKAGES[@]}"; do
 			ok=1
 			break
 		fi
-		if grep -q 'invalid or corrupted package (checksum)' "$log"; then
-			echo "::warning::repository package checksum failed; retrying $dir"
+		if grep -qE 'invalid or corrupted package \(checksum\)|failed retrieving file|failed to commit transaction|failed to install missing dependencies|Could not resolve host' "$log"; then
+			echo "::warning::package download/checksum failed; retrying $dir (attempt $attempt/5)"
 			pacman -Scc --noconfirm >/dev/null 2>&1 || true
 			pacman -Syy --noconfirm >/dev/null 2>&1 || true
-			sleep 30
+			sleep $((attempt * 30))
 			attempt=$((attempt + 1))
 			continue
 		fi
