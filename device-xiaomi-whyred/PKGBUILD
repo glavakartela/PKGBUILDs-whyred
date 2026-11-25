@@ -1,7 +1,7 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=device-xiaomi-whyred
 pkgver=5
-pkgrel=4
+pkgrel=5
 pkgdesc="Configuration for Xiaomi Redmi Note 5 Pro"
 url="https://postmarketos.org"
 arch=('aarch64')
@@ -11,28 +11,25 @@ depends=(
 	'sdm660-linux-whyred'
 	'systemd'
 	'libqmi'
-	'dbus'
-	'alsa-lib'
 	'qrtr'
 	'pd-mapper'
 	'rmtfs'
 	'tqftpserv'
-	'qcom-diag'
-	'qbootctl'
-	'msm-modem'
-	'q6voiced'
 	'swclock-offset'
 	'modemmanager'
 	'networkmanager'
-	'mobile-broadband-provider-info'
-	'python'
 	'sudo'
 )
 
 provides=('alsa-ucm-conf')
 conflicts=('alsa-ucm-conf')
 optdepends=(
-	'modemmanager: required for q6voiced call signalling, and for the call-audio-idle-suspend-workaround and modem-gnss services'
+	'msm-modem: UIM selection and WWAN port helpers'
+	'q6voiced: Q6Voice call audio routing'
+	'qcom-diag: Qualcomm diag logging'
+	'qbootctl: bootloader control'
+	'python: provider-database APN fallback'
+	'mobile-broadband-provider-info: provider-database APN fallback'
 	'ofono: alternative to modemmanager for q6voiced call signalling'
 	'pipewire-pulse: required for the call-audio-idle-suspend-workaround service'
 	'vulkan-icd-loader: Vulkan support for the freedreno GPU driver'
