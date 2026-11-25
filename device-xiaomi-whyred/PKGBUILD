@@ -1,7 +1,7 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=device-xiaomi-whyred
 pkgver=5
-pkgrel=3
+pkgrel=4
 pkgdesc="Configuration for Xiaomi Redmi Note 5 Pro"
 url="https://postmarketos.org"
 arch=('aarch64')
@@ -40,7 +40,7 @@ optdepends=(
 
 makedepends=('gcc')
 backup=(
-	'etc/UPower/UPower.conf'
+	'etc/UPower/UPower.conf.d/70-whyred.conf'
 	'usr/share/wireplumber/wireplumber.conf.d/51-qcom.conf'
 	'usr/lib/environment.d/50-soc-qcom-gstreamer.conf'
 	'etc/whyred-autobrightness.conf'
@@ -50,7 +50,7 @@ options=('!strip')
 _alsaucm_commit="d64f7831da66e053dbd80e1c387763e191f77173"
 source=(
 	"alsa-ucm-conf-$_alsaucm_commit.tar.gz::https://github.com/sdm660-mainline/alsa-ucm-conf/archive/$_alsaucm_commit.tar.gz"
-	UPower.conf
+	70-whyred.conf
 	51-qcom.conf
 	50-soc-qcom-gstreamer.conf
 	sdm660-adreno-quirks.sh
@@ -86,7 +86,7 @@ source=(
 	whyred-cell-sudoers
 )
 sha256sums=('SKIP'
-            'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
+            '47f625def83990278bead66e577454f375d39f429283ddcfa92cfd2a277908f1' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
             'SKIP' 'SKIP' 'SKIP' 'SKIP'
             'bf72af611bb1a12abccb0784ab62bffc8c701b3454a644b1dc1ca494dacb4128'
             '9659fdd27350360e25149c9544069c9ff973c7f8c4be8d2bb267a12ca8528a4d'
@@ -119,8 +119,8 @@ package() {
 	install -d "$pkgdir/usr/share/alsa"
 	cp -r "alsa-ucm-conf-$_alsaucm_commit/ucm2" "$pkgdir/usr/share/alsa/"
 
-	install -Dm644 UPower.conf \
-		"$pkgdir/etc/UPower/UPower.conf"
+	install -Dm644 70-whyred.conf \
+		"$pkgdir/etc/UPower/UPower.conf.d/70-whyred.conf"
 
 	install -Dm644 51-qcom.conf \
 		-t "$pkgdir/usr/share/wireplumber/wireplumber.conf.d"
