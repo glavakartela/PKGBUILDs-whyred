@@ -1,0 +1,28 @@
+#!/bin/sh
+# Enable or disable the whyred cellular data path from the Plasma quick
+# setting.  This never asks NetworkManager to activate the modem (which
+# cannot drive the IPA QMAP mux on this device); it only starts/stops the
+# whyred-cell service and its address/route.
+set -u
+
+case "${1:-toggle}" in
+on)
+	systemctl enable --now whyred-cell
+	;;
+off)
+	systemctl disable --now whyred-cell
+	ip route del default dev qmapmux0.0 2>/dev/null || true
+	ip addr flush dev qmapmux0.0 2>/dev/null || true
+	;;
+toggle)
+	if systemctl is-enabled --quiet whyred-cell; then
+		exec "$0" off
+	else
+		exec "$0" on
+	fi
+	;;
+*)
+	echo "usage: $0 {on|off|toggle}" >&2
+	exit 2
+	;;
+esac

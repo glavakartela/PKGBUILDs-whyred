@@ -1,0 +1,46 @@
+#!/bin/sh
+# Short helper: ipa <command>
+case "$1" in
+  status)
+    echo "kernel: $(uname -r)"
+    echo "ipa:    $(cat /sys/module/ipa/srcversion 2>/dev/null)"
+    ip -br addr show wlan0 2>/dev/null | head -1
+    ip route 2>/dev/null | head -3
+    ;;
+  apn)
+    /usr/local/bin/whyred-apn show
+    ;;
+  cell)
+    systemctl status whyred-cell --no-pager -n 4
+    /usr/local/bin/whyred-apn show
+    ;;
+  cell-restart)
+    systemctl restart whyred-cell
+    sleep 2
+    /usr/local/bin/whyred-apn show
+    ;;
+  dmesg)
+    dmesg | grep -iE 'ipa|v2 status' | tail -40
+    ;;
+  irq)
+    grep -iE 'ipa|bam_dma' /proc/interrupts
+    ;;
+  regs)
+    cat /sys/kernel/debug/ipa/state 2>/dev/null
+    ;;
+  ping)
+    ping -I qmapmux0.0 -c 5 -W 2 "${2:-1.1.1.1}"
+    ;;
+  net)
+    mmcli -m 0 --simple-connect="apn=${2:-internet},ip-type=ipv4"
+    ;;
+  reboot)
+    systemctl reboot
+    ;;
+  bootloader)
+    systemctl reboot --bootloader
+    ;;
+  *)
+    echo "usage: ipa {status|apn|cell|cell-restart|dmesg|irq|regs|ping|net|reboot|bootloader}"
+    ;;
+esac

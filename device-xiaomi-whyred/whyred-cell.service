@@ -1,0 +1,14 @@
+[Unit]
+Description=Whyred cellular bearer (LTE fallback)
+After=ModemManager.service network.target
+Wants=ModemManager.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/whyred-cell
+Restart=always
+RestartSec=10
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

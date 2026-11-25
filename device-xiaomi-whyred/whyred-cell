@@ -1,0 +1,256 @@
+#!/bin/sh
+# Keep the whyred cellular bearer configured as an LTE fallback.
+#
+# NetworkManager cannot manage the QMAP mux created by ModemManager on
+# this device, so this daemon does what NM would otherwise do: connect
+# the bearer, put the operator address on qmapmux0.0, and install a
+# default route with a higher metric than Wi-Fi.  Wi-Fi therefore stays
+# the preferred route; LTE takes over only when no Wi-Fi default exists.
+set -u
+
+CONF=/etc/whyred-cell.conf
+[ -r "$CONF" ] && . "$CONF"
+
+: "${APN:=}"
+: "${DEV:=qmapmux0.0}"
+: "${METRIC:=700}"
+: "${POLL:=10}"
+: "${RETRY:=30}"
+: "${APN_USER:=}"
+: "${APN_PASS:=}"
+
+STA=/run/whyred-cell
+NM_PROFILE="Whyred LTE"
+
+log() {
+	logger -t whyred-cell "$*" 2>/dev/null || true
+}
+
+bearer_id() {
+	# mmcli 1.24 on this image rejects --list-bearers; probe the bearer
+	# objects directly and return the first connected one.
+	for b in 1 2 3 4; do
+		info=$(mmcli -m 0 -b "$b" 2>/dev/null) || continue
+		case "$info" in
+		*"connected: yes"*) printf '%s\n' "$b"; return 0 ;;
+		esac
+	done
+	return 0
+}
+
+field() {
+	printf '%s\n' "$1" | sed -n "s/.*$2: *//p" | head -1
+}
+
+# Pick an APN without requiring manual configuration.  The modem's
+# initial EPS bearer profile is authoritative (Android reads the same
+# value from the SIM/modem); the distro's provider database is used only
+# if the modem does not report one.
+detect_apn() {
+	apn_source=config
+	if [ -n "${APN:-}" ]; then
+		printf '%s|%s\n' "$APN" "$apn_source"
+		return
+	fi
+
+	info=$(mmcli -m 0 2>/dev/null) || info=
+	apn=$(printf '%s\n' "$info" |
+		sed -n 's/.*initial bearer apn: *//p' | head -1)
+	if [ -n "$apn" ]; then
+		apn_source="modem initial bearer"
+		printf '%s|%s\n' "$apn" "$apn_source"
+		return
+	fi
+
+	mccmnc=$(printf '%s\n' "$info" |
+		sed -n 's/.*operator id: *//p' | head -1)
+	if [ -n "$mccmnc" ] && command -v python3 >/dev/null 2>&1 &&
+	   [ -r /usr/share/mobile-broadband-provider-info/serviceproviders.xml ]; then
+		apn=$(python3 - "$mccmnc" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+mccmnc = sys.argv[1]
+mcc, mnc = mccmnc[:3], mccmnc[3:]
+try:
+    root = ET.parse('/usr/share/mobile-broadband-provider-info/serviceproviders.xml').getroot()
+except Exception:
+    sys.exit(0)
+
+candidates = []
+for provider in root.iter('provider'):
+    for gsm in provider.findall('gsm'):
+        for nid in gsm.findall('network-id'):
+            if nid.get('mcc') != mcc:
+                continue
+            if nid.get('mnc') not in (mnc, mnc.lstrip('0')):
+                continue
+            for apn in gsm.findall('apn'):
+                value = apn.get('value')
+                if not value:
+                    continue
+                usage = apn.find('usage')
+                if usage is not None and usage.get('type') != 'internet':
+                    continue
+                candidates.append(value)
+
+if candidates:
+    # Prefer a plain "internet" APN, otherwise the first data APN.
+    for value in candidates:
+        if value == 'internet':
+            print(value)
+            sys.exit(0)
+    print(candidates[0])
+PY
+)
+		if [ -n "$apn" ]; then
+			apn_source="provider database ($mccmnc)"
+			printf '%s|%s\n' "$apn" "$apn_source"
+			return
+		fi
+	fi
+
+	apn_source=default
+	printf '%s|%s\n' internet "$apn_source"
+}
+
+configure() {
+	bid=$1
+	info=$(mmcli -m 0 -b "$bid" 2>/dev/null) || return 1
+
+	addr=$(field "$info" address)
+	prefix=$(field "$info" prefix)
+	gw=$(field "$info" gateway)
+	dnsline=$(field "$info" dns)
+
+	[ -n "$addr" ] && [ -n "$prefix" ] || return 1
+	ip link show "$DEV" >/dev/null 2>&1 || return 1
+
+	cur=$(ip -4 -o addr show dev "$DEV" 2>/dev/null |
+		awk '{ print $4 }' | head -1)
+	if [ "$cur" != "$addr/$prefix" ]; then
+		ip addr flush dev "$DEV" 2>/dev/null
+		ip addr add "$addr/$prefix" dev "$DEV" || return 1
+	fi
+	ip link set "$DEV" up
+
+	if [ -n "$gw" ]; then
+		if ! ip route show default dev "$DEV" 2>/dev/null |
+		     grep -q .; then
+			ip route add default via "$gw" dev "$DEV" \
+				metric "$METRIC" 2>/dev/null || true
+		fi
+	fi
+
+	if [ -n "$dnsline" ]; then
+		set -- $(printf '%s' "$dnsline" | tr ',' ' ')
+		if ip route show default dev wlan0 2>/dev/null | grep -q .; then
+			mode=wifi
+		else
+			mode=cell
+		fi
+		if [ "$mode" != "$dns_mode" ]; then
+			if [ "$mode" = cell ]; then
+				resolvectl dns "$DEV" "$@" >/dev/null 2>&1 || true
+				resolvectl domain "$DEV" '~.' >/dev/null 2>&1 || true
+			else
+				# Clear the all-names routing domain again; DNS
+				# then follows the lower-metric Wi-Fi route.
+				resolvectl revert "$DEV" >/dev/null 2>&1 || true
+				resolvectl dns "$DEV" "$@" >/dev/null 2>&1 || true
+			fi
+			dns_mode=$mode
+		fi
+	fi
+
+	return 0
+}
+
+write_apn_status() {
+	mkdir -p "$STA" 2>/dev/null || true
+	printf '%s\n' "$1" > "$STA/apn" 2>/dev/null || true
+	printf '%s\n' "$2" > "$STA/source" 2>/dev/null || true
+}
+
+# Plasma's Cellular page reports "An APN needs to be configured" when the
+# NetworkManager modem has no connection profile at all.  Keep a profile
+# in sync with the detected APN so the GUI sees one, but never let it
+# autoconnect: whyred-cell owns the actual data path.
+sync_nm_profile() {
+	apn=$1
+	command -v nmcli >/dev/null 2>&1 || return 0
+	[ -n "$apn" ] || return 0
+
+	if nmcli connection show "$NM_PROFILE" >/dev/null 2>&1; then
+		cur=$(nmcli -g gsm.apn connection show "$NM_PROFILE" 2>/dev/null |
+			tr -d '"')
+		if [ "$cur" != "$apn" ]; then
+			nmcli connection modify "$NM_PROFILE" gsm.apn "$apn" \
+				connection.autoconnect no >/dev/null 2>&1 || true
+		fi
+	else
+		nmcli connection add type gsm con-name "$NM_PROFILE" \
+			apn "$apn" autoconnect no >/dev/null 2>&1 || return 0
+	fi
+
+	if [ -n "$APN_USER" ] || [ -n "$APN_PASS" ]; then
+		nmcli connection modify "$NM_PROFILE" \
+			gsm.username "$APN_USER" gsm.password "$APN_PASS" \
+			>/dev/null 2>&1 || true
+	fi
+}
+
+if [ "${1:-}" = "--detect" ]; then
+	detect_apn
+	exit 0
+fi
+
+# Publish the selected APN for whyred-apn even when the bearer is already
+# connected (e.g. after a service restart).
+if [ ! -s "$STA/apn" ]; then
+	detected=$(detect_apn)
+	write_apn_status "${detected%%|*}" "${detected#*|}"
+	sync_nm_profile "${detected%%|*}"
+fi
+
+last=""
+dns_mode=""
+while :; do
+	if ! mmcli -m 0 >/dev/null 2>&1; then
+		sleep "$RETRY"
+		continue
+	fi
+
+	bid=$(bearer_id)
+	if [ -z "$bid" ]; then
+		detected=$(detect_apn)
+		apn=${detected%%|*}
+		apn_source=${detected#*|}
+		write_apn_status "$apn" "$apn_source"
+		sync_nm_profile "$apn"
+		connect_args="apn=$apn,ip-type=ipv4"
+		[ -n "$APN_USER" ] && connect_args="$connect_args,username=$APN_USER"
+		[ -n "$APN_PASS" ] && connect_args="$connect_args,password=$APN_PASS"
+		log "connecting with APN $apn ($apn_source)"
+		if ! mmcli -m 0 --simple-connect="$connect_args" \
+			>/dev/null 2>&1; then
+			log "simple-connect failed"
+			sleep "$RETRY"
+			continue
+		fi
+		sleep 3
+		bid=$(bearer_id)
+	fi
+
+	if [ -n "$bid" ] && configure "$bid"; then
+		msg="bearer $bid up on $DEV (metric $METRIC)"
+	else
+		msg="bearer ${bid:-none} not ready"
+	fi
+	if [ "$msg" != "$last" ]; then
+		log "$msg"
+		last=$msg
+	fi
+
+	sleep "$POLL"
+done

@@ -1,18 +1,28 @@
 #!/bin/sh
 # Adjust the whyred panel backlight from the LTR578 ambient light sensor.
+#
+# The sensor is sampled several times and reduced with a median, the new
+# target must persist for HOLD_SECS before it is applied, and the applied
+# value moves toward the target in bounded steps.  This keeps a passing
+# shadow or a single noisy sample from flashing the panel.
 set -u
 
 CONF=/etc/whyred-autobrightness.conf
 [ -r "$CONF" ] && . "$CONF"
+
 : "${ENABLED:=1}"
 : "${MIN_BRIGHTNESS:=300}"
 : "${MAX_BRIGHTNESS:=4095}"
 : "${INTERVAL:=2}"
+: "${SAMPLE_COUNT:=3}"
+: "${SAMPLE_DELAY:=0.2}"
+: "${HOLD_SECS:=2}"
 : "${CURVE_DIVISOR:=3.2}"
-: "${USE_KDE_BRIGHTNESS:=1}"
-: "${FADE_MS:=800}"
-: "${MIN_DELTA:=30}"
-: "${SYNC_DELTA:=20}"
+: "${USE_KDE_BRIGHTNESS:=0}"
+: "${FADE_MS:=700}"
+: "${MIN_DELTA:=40}"
+: "${MAX_STEP:=800}"
+: "${SYNC_DELTA:=200}"
 
 bl=/sys/class/backlight/backlight
 fade=/usr/local/bin/whyred-backlight-fade
@@ -25,6 +35,17 @@ find_light() {
 		return 0
 	done
 	return 1
+}
+
+read_raw() {
+	timeout 2 cat "$1/in_illuminance_raw" 2>/dev/null
+}
+
+clamp() {
+	val=$1
+	[ "$val" -lt "$MIN_BRIGHTNESS" ] && val=$MIN_BRIGHTNESS
+	[ "$val" -gt "$MAX_BRIGHTNESS" ] && val=$MAX_BRIGHTNESS
+	printf '%s\n' "$val"
 }
 
 sync_kde_brightness() {
@@ -48,30 +69,53 @@ sync_kde_brightness() {
 		SetBrightness iu "$kde" 0 >/dev/null 2>&1 || true
 }
 
-first=1
+applied=-1
+pending=
+pending_since=0
 last_synced=-1
 
 while :; do
 	[ -r "$CONF" ] && . "$CONF"
+
 	if [ "$ENABLED" != 1 ]; then
+		pending=
+		applied=-1
 		sleep "$INTERVAL"
 		continue
 	fi
+
 	if [ "$(cat "$bl/bl_power" 2>/dev/null || echo 0)" != 0 ]; then
+		# The panel is blanked; actual_brightness reads as 0.  Re-arm
+		# so the first visible frame starts from the requested level.
+		pending=
+		applied=-1
 		sleep "$INTERVAL"
 		continue
 	fi
+
 	dev=$(find_light) || { sleep 5; continue; }
-	raw=$(timeout 3 cat "$dev/in_illuminance_raw" 2>/dev/null) || {
-		sleep "$INTERVAL"
-		continue
-	}
-	case "$raw" in
+
+	samples=
+	i=0
+	while [ "$i" -lt "$SAMPLE_COUNT" ]; do
+		raw=$(read_raw "$dev") || break
+		case "$raw" in
+		''|*[!0-9]*) break ;;
+		esac
+		samples="$samples $raw"
+		i=$((i + 1))
+		[ "$i" -lt "$SAMPLE_COUNT" ] && sleep "$SAMPLE_DELAY"
+	done
+	[ -n "$samples" ] || { sleep "$INTERVAL"; continue; }
+
+	median=$(printf '%s\n' $samples | sort -n |
+		sed -n "$(( (i + 1) / 2 ))p")
+	case "$median" in
 	''|*[!0-9]*) sleep "$INTERVAL"; continue ;;
 	esac
 
-	target=$(awk -v r="$raw" -v min="$MIN_BRIGHTNESS" -v max="$MAX_BRIGHTNESS" \
-		-v div="$CURVE_DIVISOR" 'BEGIN {
+	target=$(awk -v r="$median" -v min="$MIN_BRIGHTNESS" \
+		-v max="$MAX_BRIGHTNESS" -v div="$CURVE_DIVISOR" 'BEGIN {
 			l = r / 65536.0;
 			if (l < 1) l = 1;
 			p = log(l) / log(10) / div;
@@ -79,25 +123,57 @@ while :; do
 			if (p > 1) p = 1;
 			printf "%d", min + (max - min) * p;
 		}')
+	target=$(clamp "$target")
 
-	actual=$(cat "$bl/actual_brightness" 2>/dev/null || echo "$target")
-	delta=$((target > actual ? target - actual : actual - target))
-	if [ "$first" -eq 0 ] && [ "$delta" -lt "$MIN_DELTA" ]; then
+	if [ "$applied" -lt 0 ]; then
+		cur=$(cat "$bl/brightness" 2>/dev/null || echo "$target")
+		case "$cur" in
+		''|*[!0-9]*) cur=$target ;;
+		esac
+		applied=$(clamp "$cur")
+	fi
+
+	now=$(date +%s)
+	if [ -z "$pending" ] ||
+	   [ "$target" -ge $((pending + MIN_DELTA)) ] ||
+	   [ "$target" -le $((pending - MIN_DELTA)) ]; then
+		pending=$target
+		pending_since=$now
+	fi
+
+	if [ $((now - pending_since)) -lt "$HOLD_SECS" ]; then
+		sleep "$INTERVAL"
+		continue
+	fi
+
+	delta=$((pending - applied))
+	if [ "$delta" -gt "$MAX_STEP" ]; then
+		delta=$MAX_STEP
+	elif [ "$delta" -lt $((0 - MAX_STEP)) ]; then
+		delta=$((0 - MAX_STEP))
+	fi
+	new=$(clamp $((applied + delta)))
+
+	if [ "$new" -eq "$applied" ]; then
 		sleep "$INTERVAL"
 		continue
 	fi
 
 	if [ -x "$fade" ]; then
-		"$fade" "$target" "$FADE_MS" || true
+		"$fade" "$new" "$FADE_MS" || true
 	else
-		printf '%s\n' "$target" > "$bl/brightness" 2>/dev/null || true
+		printf '%s\n' "$new" > "$bl/brightness" 2>/dev/null || true
 	fi
-	actual=$(cat "$bl/actual_brightness" 2>/dev/null || echo "$target")
-	sync_delta=$((actual > last_synced ? actual - last_synced : last_synced - actual))
-	if [ "$first" -eq 1 ] || [ "$last_synced" -lt 0 ] || [ "$sync_delta" -ge "$SYNC_DELTA" ]; then
-		sync_kde_brightness "$actual"
-		last_synced=$actual
-		first=0
+	applied=$new
+
+	if [ "$applied" -eq "$pending" ] && [ "$USE_KDE_BRIGHTNESS" = 1 ]; then
+		sync_delta=$((applied > last_synced ?
+			applied - last_synced : last_synced - applied))
+		if [ "$last_synced" -lt 0 ] || [ "$sync_delta" -ge "$SYNC_DELTA" ]; then
+			sync_kde_brightness "$applied"
+			last_synced=$applied
+		fi
 	fi
+
 	sleep "$INTERVAL"
 done

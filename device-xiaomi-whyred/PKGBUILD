@@ -1,7 +1,7 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=device-xiaomi-whyred
 pkgver=5
-pkgrel=1
+pkgrel=2
 pkgdesc="Configuration for Xiaomi Redmi Note 5 Pro"
 url="https://postmarketos.org"
 arch=('aarch64')
@@ -22,6 +22,10 @@ depends=(
 	'msm-modem'
 	'q6voiced'
 	'swclock-offset'
+	'modemmanager'
+	'mobile-broadband-provider-info'
+	'python'
+	'sudo'
 )
 
 provides=('alsa-ucm-conf')
@@ -39,6 +43,7 @@ backup=(
 	'usr/share/wireplumber/wireplumber.conf.d/51-qcom.conf'
 	'usr/lib/environment.d/50-soc-qcom-gstreamer.conf'
 	'etc/whyred-autobrightness.conf'
+	'etc/whyred-cell.conf'
 )
 options=('!strip')
 _alsaucm_commit="d64f7831da66e053dbd80e1c387763e191f77173"
@@ -71,6 +76,13 @@ source=(
 	whyred-autobrightness.conf
 	whyred-autobrightness.service
 	whyred-backlight-fade.c
+	whyred-cell
+	whyred-cell.conf
+	whyred-cell.service
+	whyred-apn
+	ipa-helper
+	whyred-cell-toggle
+	whyred-cell-sudoers
 )
 sha256sums=('SKIP'
             'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
@@ -86,10 +98,17 @@ sha256sums=('SKIP'
             'd84a0576af4029546dd63b11b0b9a4a6d7a115440d06136e2492c389f0bc8807'
             'e1813bae8a683bf479544a910cd8224a6a1afd027e1ef3829d9b222521386021'
             '27a34372eb9f845fe92da214b49181859dd191862346ddc3641d23ebda200fa3'
-            'a9d42ae41c318b01b0a8d21967236717fb766ff82da72b03c9667e7b3472cc9e'
-            'adb72dd9182bd6fdfe177a4e5d08b1fc99b2699f7099cb82e26a73aaf6c6d1bf'
+            'a5b3df14a9f9162ddf789e7ff702af14cc74adde25c6319644e8b6899b5f6347'
+            '5f6536b8358370afa38a83f99a4fd9a8eb8a6910c5ac50d9465faa3d41195bca'
             'a485194ca015ace7353fc7c7f848a59fc2509e89d13ab393115421ebe8f65eaf'
-            '3b70a14d16d60590dfd708592de2983a77aabf0f0f8a1baa14b6d12974b69054')
+            '50459a7079606d38a4fa1929d95a36dbe68a39bc0a478ec9fbd55286341e9a51'
+            'da2acb2b374e3c7e789928215f09f16a4847fa8f58a78aa9a918ab510f189274'
+            '854398a26e58650bb3aac2f32ef27e997cc57be6931eecdeaf9afb6bfc2cc312'
+            '6f4d06076b10cb95c23af768d1f8f6edff68e256f4574463539b83870048259a'
+            '7ee9179cb2164be527c7a9738de07b4b6da73c5f2620bc22c3ad2f875ad2f188'
+            '61ee0076a9dd91f47e9e576d163ff82a521d9c80fc637f1e286b5569e85527f4'
+            '4958fc0e27296b53d542b28a785ceddfc766f56bb7c666b6971f1f66f31b6847'
+            '643e5937aada58e99f7a6e47227b01593b989216f44ffdb08158c56ee98de807')
 
 build() {
 	cc -O2 -s -o whyred-backlight-fade whyred-backlight-fade.c
@@ -173,8 +192,24 @@ package() {
 	install -Dm644 whyred-autobrightness.service \
 		-t "$pkgdir/usr/lib/systemd/system"
 
+	# LTE fallback bearer and APN helpers.
+	install -Dm755 whyred-cell \
+		"$pkgdir/usr/local/bin/whyred-cell"
+	install -Dm644 whyred-cell.conf \
+		"$pkgdir/etc/whyred-cell.conf"
+	install -Dm644 whyred-cell.service \
+		-t "$pkgdir/usr/lib/systemd/system"
+	install -Dm755 whyred-apn \
+		"$pkgdir/usr/local/bin/whyred-apn"
+	install -Dm755 ipa-helper \
+		"$pkgdir/usr/local/bin/ipa"
+	install -Dm755 whyred-cell-toggle \
+		"$pkgdir/usr/local/bin/whyred-cell-toggle"
+	install -Dm440 whyred-cell-sudoers \
+		"$pkgdir/etc/sudoers.d/whyred-cell"
+
 	install -d "$pkgdir/usr/lib/systemd/system/multi-user.target.wants"
-	for _unit in whyred-uim-select whyred-sim-hotplug whyred-autobrightness; do
+	for _unit in whyred-uim-select whyred-sim-hotplug whyred-autobrightness whyred-cell; do
 		ln -sf "../$_unit.service" \
 			"$pkgdir/usr/lib/systemd/system/multi-user.target.wants/$_unit.service"
 	done

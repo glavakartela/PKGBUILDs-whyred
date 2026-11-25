@@ -1,0 +1,102 @@
+#!/bin/sh
+# Show or change the automatic cellular APN used by whyred-cell.
+#
+#   whyred-apn              show the detected APN, its source and the carrier
+#   whyred-apn auto         clear the override and let the modem/provider
+#                           database choose the APN
+#   whyred-apn set APN [USER [PASS]]
+#                           pin a specific APN (and optional credentials)
+set -u
+
+CONF=/etc/whyred-cell.conf
+STA=/run/whyred-cell
+CELL=/usr/local/bin/whyred-cell
+
+usage() {
+	cat <<'EOF'
+usage: whyred-apn [show|auto|set APN [USER [PASS]]]
+
+  show   show the APN selected by whyred-cell
+  auto   use the modem's initial bearer APN, then the provider database
+  set    pin an APN and optional username/password
+EOF
+}
+
+detect() {
+	if [ -s "$STA/apn" ] && [ -s "$STA/source" ]; then
+		printf '%s|%s\n' "$(cat "$STA/apn" 2>/dev/null)" \
+			"$(cat "$STA/source" 2>/dev/null)"
+		return
+	fi
+	if [ -x "$CELL" ]; then
+		"$CELL" --detect 2>/dev/null
+		return
+	fi
+	printf 'unknown|unavailable\n'
+}
+
+show() {
+	detected=$(detect)
+	apn=${detected%%|*}
+	source=${detected#*|}
+
+	printf 'APN:     %s\n' "$apn"
+	printf 'source:  %s\n' "$source"
+
+	info=$(mmcli -m 0 2>/dev/null) || info=
+	opid=$(printf '%s\n' "$info" |
+		sed -n 's/.*operator id: *//p' | head -1)
+	opname=$(printf '%s\n' "$info" |
+		sed -n 's/.*operator name: *//p' | head -1)
+	if [ -n "$opname" ] || [ -n "$opid" ]; then
+		printf 'carrier: %s (%s)\n' "${opname:-unknown}" "${opid:-?}"
+	fi
+	ip -4 -o addr show dev qmapmux0.0 2>/dev/null |
+		awk '{ print "address: " $4 }'
+	ip route show default dev qmapmux0.0 2>/dev/null |
+		sed 's/^/route:   /'
+}
+
+require_root() {
+	[ "$(id -u)" = 0 ] || {
+		echo "whyred-apn: run as root (sudo whyred-apn $*)" >&2
+		exit 1
+	}
+}
+
+set_auto() {
+	require_root "$@"
+	sed -i 's/^APN=.*/APN=/; s/^APN_USER=.*/APN_USER=/; s/^APN_PASS=.*/APN_PASS=/' \
+		"$CONF"
+	systemctl restart whyred-cell
+	sleep 2
+	show
+}
+
+set_apn() {
+	[ -n "${1:-}" ] || { usage >&2; exit 2; }
+	require_root "$@"
+	sed -i "s|^APN=.*|APN=$1|" "$CONF"
+	sed -i "s|^APN_USER=.*|APN_USER=${2:-}|" "$CONF"
+	sed -i "s|^APN_PASS=.*|APN_PASS=${3:-}|" "$CONF"
+	systemctl restart whyred-cell
+	sleep 2
+	show
+}
+
+case "${1:-show}" in
+show|status)
+	show
+	;;
+auto|detect)
+	set_auto
+	;;
+set)
+	shift
+	set_apn "$@"
+	;;
+*)
+	usage >&2
+	exit 2
+	;;
+esac

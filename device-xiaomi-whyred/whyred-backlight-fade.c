@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/file.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -26,7 +27,7 @@ static int read_int(const char *path, int def)
 static int write_int(const char *path, int val)
 {
 	char buf[32];
-	int fd, n, len, ret;
+	int fd, n, len;
 
 	len = snprintf(buf, sizeof(buf), "%d\n", val);
 	fd = open(path, O_WRONLY);
@@ -42,10 +43,18 @@ int main(int argc, char **argv)
 	const char *brightness = "/sys/class/backlight/backlight/brightness";
 	const char *actual = "/sys/class/backlight/backlight/actual_brightness";
 	const char *maxpath = "/sys/class/backlight/backlight/max_brightness";
-	int target, duration, current, max, steps, i;
+	const char *lockpath = "/run/whyred-backlight-fade.lock";
+	int target, duration, current, max, steps, i, lockfd;
 
 	if (argc < 2)
 		return 2;
+
+	/* Only one fade may drive the panel at a time.  A second fade is
+	 * dropped instead of fighting the first one.
+	 */
+	lockfd = open(lockpath, O_CREAT | O_RDWR, 0600);
+	if (lockfd >= 0 && flock(lockfd, LOCK_EX | LOCK_NB) < 0)
+		return 0;
 
 	target = atoi(argv[1]);
 	duration = argc > 2 ? atoi(argv[2]) : 800;
@@ -60,7 +69,13 @@ int main(int argc, char **argv)
 	if (target > max)
 		target = max;
 
-	current = read_int(actual, target);
+	/* Use the requested level, not actual_brightness: the latter reads
+	 * as zero while the panel is blanked and would make a wake-up fade
+	 * start from black instead of the previous level.
+	 */
+	current = read_int(brightness, -1);
+	if (current < 0)
+		current = read_int(actual, target);
 	if (current < 0)
 		current = 0;
 	if (current > max)
