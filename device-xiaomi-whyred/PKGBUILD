@@ -1,7 +1,7 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=device-xiaomi-whyred
 pkgver=5
-pkgrel=2
+pkgrel=3
 pkgdesc="Configuration for Xiaomi Redmi Note 5 Pro"
 url="https://postmarketos.org"
 arch=('aarch64')
@@ -23,6 +23,7 @@ depends=(
 	'q6voiced'
 	'swclock-offset'
 	'modemmanager'
+	'networkmanager'
 	'mobile-broadband-provider-info'
 	'python'
 	'sudo'
@@ -205,7 +206,8 @@ package() {
 		"$pkgdir/usr/local/bin/ipa"
 	install -Dm755 whyred-cell-toggle \
 		"$pkgdir/usr/local/bin/whyred-cell-toggle"
-	install -Dm440 whyred-cell-sudoers \
+	install -d -m750 "$pkgdir/etc/sudoers.d"
+	install -m440 whyred-cell-sudoers \
 		"$pkgdir/etc/sudoers.d/whyred-cell"
 
 	install -d "$pkgdir/usr/lib/systemd/system/multi-user.target.wants"
