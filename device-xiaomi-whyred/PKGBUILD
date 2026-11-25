@@ -1,11 +1,11 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=device-xiaomi-whyred
-pkgver=4
+pkgver=5
 pkgrel=1
-pkgdesc="configuration for Xiaomi Redmi Note 5 Pro "
+pkgdesc="Configuration for Xiaomi Redmi Note 5 Pro"
 url="https://postmarketos.org"
 arch=('aarch64')
-license=('MIT' 'BSD-3-Clause' 'GPL3')
+license=('MIT' 'BSD-3-Clause' 'GPL-3.0-or-later')
 depends=(
 	'firmware-xiaomi-whyred'
 	'sdm660-linux-whyred'
@@ -19,6 +19,9 @@ depends=(
 	'tqftpserv'
 	'qcom-diag'
 	'qbootctl'
+	'msm-modem'
+	'q6voiced'
+	'swclock-offset'
 )
 
 provides=('alsa-ucm-conf')
@@ -30,7 +33,7 @@ optdepends=(
 	'vulkan-icd-loader: Vulkan support for the freedreno GPU driver'
 )
 
-makedepends=('meson' 'ninja' 'gcc')
+makedepends=('gcc')
 backup=(
 	'etc/UPower/UPower.conf'
 	'usr/share/wireplumber/wireplumber.conf.d/51-qcom.conf'
@@ -39,12 +42,7 @@ backup=(
 )
 options=('!strip')
 _alsaucm_commit="d64f7831da66e053dbd80e1c387763e191f77173"
-_q6voicedver=0.2.1
-_swclockver=20260909
 source=(
-	msm-modem-13.tar.gz
-	"q6voiced-$_q6voicedver.tar.gz"
-	"swclock-offset-$_swclockver.tar.gz"
 	"alsa-ucm-conf-$_alsaucm_commit.tar.gz::https://github.com/sdm660-mainline/alsa-ucm-conf/archive/$_alsaucm_commit.tar.gz"
 	UPower.conf
 	51-qcom.conf
@@ -74,10 +72,7 @@ source=(
 	whyred-autobrightness.service
 	whyred-backlight-fade.c
 )
-sha256sums=('e59f1e0781ebbc6aeceb3911b738e85115974eb2da0d37541bde5e4c04ca84ed'
-            '9da2f04629ced10835574da7e88a5277bece1d0fc66d456bf487b50b0fb720fa'
-            'a056a8c5e9b719105a3751ec6f79f3d9a9114b70ca1b561774c451928cdd3a71'
-            'SKIP'
+sha256sums=('SKIP'
             'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP'
             'SKIP' 'SKIP' 'SKIP' 'SKIP'
             'bf72af611bb1a12abccb0784ab62bffc8c701b3454a644b1dc1ca494dacb4128'
@@ -97,39 +92,10 @@ sha256sums=('e59f1e0781ebbc6aeceb3911b738e85115974eb2da0d37541bde5e4c04ca84ed'
             '3b70a14d16d60590dfd708592de2983a77aabf0f0f8a1baa14b6d12974b69054')
 
 build() {
-	cd "$srcdir/msm-modem-13"
-	arch-meson . build \
-		-Dopenrc=false \
-		-Dsystemd=true \
-		-Duim-selection=true \
-		-Dwwan-port=true \
-		-Ddownstream=false
-	meson compile -C build
-	cd "$srcdir"
-
-	cd "q6voiced-$_q6voicedver"
-	arch-meson . build -Dopenrc=disabled -Dsystemd=enabled
-	meson compile -C build
-	cd "$srcdir"
-
 	cc -O2 -s -o whyred-backlight-fade whyred-backlight-fade.c
 }
 
 package() {
-	cd "$srcdir/msm-modem-13"
-	meson install -C build --destdir "$pkgdir"
-	cd "$srcdir"
-
-	cd "q6voiced-$_q6voicedver"
-	meson install -C build --destdir "$pkgdir"
-	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE.q6voiced"
-	cd "$srcdir"
-
-	cd "swclock-offset-$_swclockver"
-	make DESTDIR="$pkgdir" prefix=/usr bin systemd
-	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE.swclock-offset"
-	cd "$srcdir"
-
 	install -d "$pkgdir/usr/share/alsa"
 	cp -r "alsa-ucm-conf-$_alsaucm_commit/ucm2" "$pkgdir/usr/share/alsa/"
 

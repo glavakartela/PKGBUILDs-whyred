@@ -1,0 +1,23 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=whyred-plasma
+pkgver=1
+pkgrel=1
+pkgdesc="Plasma Mobile package set for Xiaomi Redmi Note 5 Pro"
+url="https://github.com/glavakartela/PKGBUILDs-whyred"
+arch=('any')
+license=('MIT')
+depends=(
+	'plasma-mobile'
+	'plasma-settings'
+	'plasma-login-manager'
+	'bluedevil'
+	'bluez'
+	'bluez-utils'
+)
+
+package() {
+	mkdir -p "$pkgdir/usr/share/whyred-plasma"
+	printf '%s\n' \
+		'This package pulls the Plasma Mobile components used on whyred.' \
+		> "$pkgdir/usr/share/whyred-plasma/README"
+}

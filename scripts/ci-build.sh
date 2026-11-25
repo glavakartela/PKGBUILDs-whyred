@@ -49,6 +49,9 @@ declare -A INSTALL=(
 	[rmtfs]=1
 	[tqftpserv]=1
 	[qbootctl]=1
+	[msm-modem]=1
+	[q6voiced]=1
+	[swclock-offset]=1
 	[firmware-xiaomi-whyred]=1
 	[sdm660-linux-whyred]=1
 )
@@ -61,6 +64,9 @@ PACKAGES=(
 	rmtfs
 	tqftpserv
 	qbootctl
+	msm-modem
+	q6voiced
+	swclock-offset
 	bootmac
 	buffyboard
 	sdm660-linux
@@ -71,6 +77,7 @@ PACKAGES=(
 	sdm660-mesa-a5xx
 	sdm660-audio
 	sdm660-venus
+	whyred-plasma
 )
 
 while IFS= read -r dir; do

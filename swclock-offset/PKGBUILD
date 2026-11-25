@@ -1,0 +1,18 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=swclock-offset
+pkgver=20260909
+pkgrel=1
+pkgdesc="Keep system time at an offset to a non-writable RTC"
+url="https://gitlab.postmarketos.org/postmarketOS/swclock-offset"
+arch=('any')
+license=('GPL-3.0-or-later')
+depends=('systemd' 'util-linux')
+source=("swclock-offset-$pkgver.tar.gz")
+sha256sums=('a056a8c5e9b719105a3751ec6f79f3d9a9114b70ca1b561774c451928cdd3a71')
+
+package() {
+	cd "$srcdir/swclock-offset-$pkgver"
+	make DESTDIR="$pkgdir" prefix=/usr bin systemd
+	install -Dm644 LICENSE \
+		"$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

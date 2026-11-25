@@ -7,6 +7,10 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 | `sdm660-linux` | kernel from `sdm660-mainline/linux` (`qcom-sdm660-7.2.y`) |
 | `sdm660-linux-whyred` | kernel from `glavakartela/whyred-mainline` (`7.2-cpu-osm`) |
 | `device-xiaomi-whyred` | device config, firmware loader, UCM |
+| `msm-modem` | UIM selection and WWAN port helpers |
+| `q6voiced` | Q6Voice call audio routing |
+| `swclock-offset` | keep system time across a non-writable RTC |
+| `whyred-plasma` | Plasma Mobile package set (including Bluetooth UI) |
 | `firmware-xiaomi-whyred` | firmware |
 | `sdm660-mesa-a5xx` | Mesa/GL + experimental Adreno 5xx Turnip ICD |
 | `sdm660-libcamera` | libcamera with SDM660 sensor properties |

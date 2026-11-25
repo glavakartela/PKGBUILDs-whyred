@@ -1,0 +1,25 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=q6voiced
+pkgver=0.2.1
+pkgrel=1
+pkgdesc="Q6Voice call audio routing daemon"
+url="https://gitlab.postmarketos.org/postmarketOS/q6voiced"
+arch=('aarch64')
+license=('MIT')
+depends=('alsa-lib' 'dbus')
+makedepends=('meson' 'ninja' 'gcc')
+source=("q6voiced-$pkgver.tar.gz")
+sha256sums=('9da2f04629ced10835574da7e88a5277bece1d0fc66d456bf487b50b0fb720fa')
+
+build() {
+	cd "$srcdir/q6voiced-$pkgver"
+	arch-meson . build -Dopenrc=disabled -Dsystemd=enabled
+	meson compile -C build
+}
+
+package() {
+	cd "$srcdir/q6voiced-$pkgver"
+	meson install -C build --destdir "$pkgdir"
+	install -Dm644 LICENSE \
+		"$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

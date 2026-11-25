@@ -1,0 +1,30 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=msm-modem
+pkgver=13
+pkgrel=1
+pkgdesc="MSM modem UIM selection and WWAN port helpers"
+url="https://gitlab.postmarketos.org/postmarketOS/msm-modem"
+arch=('aarch64')
+license=('GPL-3.0-or-later')
+depends=('systemd')
+makedepends=('meson' 'ninja' 'gcc')
+source=("msm-modem-$pkgver.tar.gz")
+sha256sums=('e59f1e0781ebbc6aeceb3911b738e85115974eb2da0d37541bde5e4c04ca84ed')
+
+build() {
+	cd "$srcdir/msm-modem-$pkgver"
+	arch-meson . build \
+		-Dopenrc=false \
+		-Dsystemd=true \
+		-Duim-selection=true \
+		-Dwwan-port=true \
+		-Ddownstream=false
+	meson compile -C build
+}
+
+package() {
+	cd "$srcdir/msm-modem-$pkgver"
+	meson install -C build --destdir "$pkgdir"
+	install -Dm644 LICENSE \
+		"$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
