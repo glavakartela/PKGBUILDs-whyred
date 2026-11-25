@@ -1,14 +1,15 @@
 # Maintainer: Kulesha Evgeniy
+# AutoUpdate: linux-msm/diag master
 pkgname=qcom-diag
 pkgver=0.git20250324
-pkgrel=1
+pkgrel=20261124183932
 pkgdesc="Routing of diagnostics related messages between host and various Qualcomm subsystems"
 arch=('aarch64')
 url="https://github.com/linux-msm/diag"
 license=('BSD-3-Clause')
 depends=('qrtr' 'systemd')
 makedepends=('linux-headers')
-_commit="29277ef0bcbe22468a3836b796dc525ba6df87f3"
+_commit=23c12c167e93215853af4e59c021551767f6fec8
 source=(
 	"diag-$_commit.tar.gz::https://github.com/linux-msm/diag/archive/$_commit.tar.gz"
 	diag-router.service

@@ -1,0 +1,103 @@
+#!/bin/sh
+# Adjust the whyred panel backlight from the LTR578 ambient light sensor.
+set -u
+
+CONF=/etc/whyred-autobrightness.conf
+[ -r "$CONF" ] && . "$CONF"
+: "${ENABLED:=1}"
+: "${MIN_BRIGHTNESS:=300}"
+: "${MAX_BRIGHTNESS:=4095}"
+: "${INTERVAL:=2}"
+: "${CURVE_DIVISOR:=3.2}"
+: "${USE_KDE_BRIGHTNESS:=1}"
+: "${FADE_MS:=800}"
+: "${MIN_DELTA:=30}"
+: "${SYNC_DELTA:=20}"
+
+bl=/sys/class/backlight/backlight
+fade=/usr/local/bin/whyred-backlight-fade
+
+find_light() {
+	for d in /sys/bus/iio/devices/iio:device*; do
+		[ -r "$d/name" ] || continue
+		[ "$(cat "$d/name" 2>/dev/null)" = "qcom-smgr-prox" ] || continue
+		printf '%s\n' "$d"
+		return 0
+	done
+	return 1
+}
+
+sync_kde_brightness() {
+	[ "$USE_KDE_BRIGHTNESS" = 1 ] || return 0
+	val=$1
+	max=$(cat "$bl/max_brightness" 2>/dev/null) || return 0
+	[ -n "$max" ] && [ "$max" -gt 0 ] || return 0
+	kde=$(( (val * 10000 + max / 2) / max ))
+	sid=$(loginctl list-sessions --no-legend 2>/dev/null |
+		awk '$4 == "seat0" { print $1; exit }')
+	[ -n "$sid" ] || return 0
+	user=$(loginctl show-session "$sid" -p Name --value 2>/dev/null)
+	uid=$(loginctl show-session "$sid" -p User --value 2>/dev/null)
+	[ -n "$user" ] && [ -n "$uid" ] || return 0
+	runuser -u "$user" -- env \
+		XDG_RUNTIME_DIR="/run/user/$uid" \
+		DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$uid/bus" \
+		busctl --user call org.kde.ScreenBrightness \
+		/org/kde/ScreenBrightness/display0 \
+		org.kde.ScreenBrightness.Display \
+		SetBrightness iu "$kde" 0 >/dev/null 2>&1 || true
+}
+
+first=1
+last_synced=-1
+
+while :; do
+	[ -r "$CONF" ] && . "$CONF"
+	if [ "$ENABLED" != 1 ]; then
+		sleep "$INTERVAL"
+		continue
+	fi
+	if [ "$(cat "$bl/bl_power" 2>/dev/null || echo 0)" != 0 ]; then
+		sleep "$INTERVAL"
+		continue
+	fi
+	dev=$(find_light) || { sleep 5; continue; }
+	raw=$(timeout 3 cat "$dev/in_illuminance_raw" 2>/dev/null) || {
+		sleep "$INTERVAL"
+		continue
+	}
+	case "$raw" in
+	''|*[!0-9]*) sleep "$INTERVAL"; continue ;;
+	esac
+
+	target=$(awk -v r="$raw" -v min="$MIN_BRIGHTNESS" -v max="$MAX_BRIGHTNESS" \
+		-v div="$CURVE_DIVISOR" 'BEGIN {
+			l = r / 65536.0;
+			if (l < 1) l = 1;
+			p = log(l) / log(10) / div;
+			if (p < 0) p = 0;
+			if (p > 1) p = 1;
+			printf "%d", min + (max - min) * p;
+		}')
+
+	actual=$(cat "$bl/actual_brightness" 2>/dev/null || echo "$target")
+	delta=$((target > actual ? target - actual : actual - target))
+	if [ "$first" -eq 0 ] && [ "$delta" -lt "$MIN_DELTA" ]; then
+		sleep "$INTERVAL"
+		continue
+	fi
+
+	if [ -x "$fade" ]; then
+		"$fade" "$target" "$FADE_MS" || true
+	else
+		printf '%s\n' "$target" > "$bl/brightness" 2>/dev/null || true
+	fi
+	actual=$(cat "$bl/actual_brightness" 2>/dev/null || echo "$target")
+	sync_delta=$((actual > last_synced ? actual - last_synced : last_synced - actual))
+	if [ "$first" -eq 1 ] || [ "$last_synced" -lt 0 ] || [ "$sync_delta" -ge "$SYNC_DELTA" ]; then
+		sync_kde_brightness "$actual"
+		last_synced=$actual
+		first=0
+	fi
+	sleep "$INTERVAL"
+done

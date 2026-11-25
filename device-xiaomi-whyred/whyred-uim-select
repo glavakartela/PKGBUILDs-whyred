@@ -1,0 +1,61 @@
+#!/bin/sh
+# Select the primary GW UIM application before ModemManager initializes.
+# This modem firmware leaves "Primary GW: session doesn't exist" until a
+# provisioning session is activated, and ModemManager treats that as a
+# missing SIM ("GW primary session index unknown").
+set -u
+
+Q="qmicli -d qrtr://0"
+log() { echo "whyred-uim-select: $*"; }
+
+wait=0
+while ! $Q --uim-noop >/dev/null 2>&1; do
+	wait=$((wait + 1))
+	[ "$wait" -ge 45 ] && { log "modem did not appear"; exit 0; }
+	sleep 1
+done
+
+# The firmware can start in offline/shutting-down state after a failed MM run.
+	try=0
+while [ "$try" -lt 8 ]; do
+	if $Q --dms-set-operating-mode=online >/dev/null 2>&1; then
+		break
+	fi
+	try=$((try + 1))
+	sleep 1
+done
+
+out=
+try=0
+while [ "$try" -lt 30 ]; do
+	out=$($Q --uim-get-card-status 2>/dev/null || true)
+	printf '%s\n' "$out" | grep -Fq "Card state: 'present'" && break
+	try=$((try + 1))
+	sleep 1
+done
+if ! printf '%s\n' "$out" | grep -Fq "Card state: 'present'"; then
+	log "no SIM present"
+	exit 0
+fi
+
+if printf '%s\n' "$out" | grep -Fq "Primary GW:   slot"; then
+	log "primary GW session already active"
+	exit 0
+fi
+
+if ! printf '%s\n' "$out" | grep -Fq "Primary GW:   session doesn't exist"; then
+	$Q --uim-change-provisioning-session='activate=no,session-type=primary-gw-provisioning' >/dev/null 2>&1 || true
+	sleep 1
+	out=$($Q --uim-get-card-status 2>/dev/null || true)
+fi
+
+slot=$(printf '%s\n' "$out" | grep "Card state: 'present'" -m1 -B1 | head -n1 | cut -c7-7)
+aid=$(printf '%s\n' "$out" | grep "usim (2)" -m1 -A3 | tail -n1 | awk '{print $1}')
+if [ -z "$slot" ] || [ -z "$aid" ]; then
+	log "no present USIM application"
+	exit 0
+fi
+
+log "selecting AID $aid on slot $slot"
+$Q --uim-change-provisioning-session="slot=$slot,activate=yes,session-type=primary-gw-provisioning,aid=$aid" || true
+exit 0

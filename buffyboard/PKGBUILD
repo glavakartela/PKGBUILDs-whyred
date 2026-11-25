@@ -1,31 +1,45 @@
 # Maintainer: Kulesha Evgeniy
+# AutoUpdate: https://gitlab.nura.eco/nura/buffybox.git main
+# AutoUpdateSubmodule: lvgl https://github.com/lvgl/lvgl.git
 pkgname=buffyboard
 pkgver=3.6.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Touch-enabled on-screen keyboard for virtual terminals (BuffyBox suite)"
 arch=('aarch64')
-url="https://gitlab.postmarketos.org/postmarketOS/buffybox"
+url="https://gitlab.nura.eco/nura/buffybox"
 license=('GPL3')
 depends=('libinih' 'libinput' 'libxkbcommon' 'systemd-libs' 'libdrm')
 makedepends=('meson' 'ninja' 'scdoc' 'pkgconf' 'cmake')
 backup=('etc/buffyboard.conf')
-source=("buffyboard-$pkgver.tar.gz")
-sha256sums=('6307d0efa660fbf5668fc1dc1bd0e1d1cbf6a88fac847c086b2b6fbbff0027ee')
+_commit=cdb97161375badd874c21f92e9f5450b72dc2725
+_lvgl_commit=85aa60d18b3d5e5588d7b247abf90198f07c8a63
+source=(
+	"buffybox-$_commit.tar.gz::https://gitlab.nura.eco/nura/buffybox/-/archive/$_commit/buffybox-$_commit.tar.gz"
+	"lvgl-$_lvgl_commit.tar.gz::https://github.com/lvgl/lvgl/archive/$_lvgl_commit.tar.gz"
+)
+sha256sums=('SKIP' 'SKIP')
+
+prepare() {
+	cd "$srcdir/buffybox-$_commit"
+	# The GitLab archive does not contain submodule contents.
+	rm -rf lvgl
+	ln -s "$srcdir/lvgl-$_lvgl_commit" lvgl
+}
 
 build() {
-  cd "$srcdir/buffyboard-$pkgver"
+	cd "$srcdir/buffybox-$_commit"
 
-  arch-meson _build \
-    -Dsystemd=true \
-    -Dman=true
+	arch-meson _build \
+		-Dsystemd=true \
+		-Dman=true
 
-  meson compile -C _build \
-    buffyboard/buffyboard \
-    man/buffyboard.1 \
-    man/buffyboard.conf.5
+	meson compile -C _build \
+		buffyboard/buffyboard \
+		man/buffyboard.1 \
+		man/buffyboard.conf.5
 }
 
 package() {
-  cd "$srcdir/buffyboard-$pkgver"
-  meson install -C _build --tags=buffyboard --destdir="$pkgdir"
+	cd "$srcdir/buffybox-$_commit"
+	meson install -C _build --tags=buffyboard --destdir="$pkgdir"
 }

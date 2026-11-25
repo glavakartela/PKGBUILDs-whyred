@@ -1,23 +1,26 @@
 # Maintainer: Kulesha Evgeniy
+# AutoUpdate: linux-msm/rmtfs master
 pkgname=rmtfs
 pkgver=20260909
-pkgrel=1
+pkgrel=2
 pkgdesc="Qualcomm remote filesystem service - gives the modem access to shared memory / EFS storage"
 arch=('aarch64')
 url="https://github.com/linux-msm/rmtfs"
 license=('BSD-3-Clause')
 depends=('qrtr' 'systemd-libs')
 _efspath=/var/lib/rmtfs
-source=("rmtfs-$pkgver.tar.gz")
-sha256sums=('18305d8c4169c050a6531c9d66666ed283ae83769a772277870ec8f84e32f48f')
+_commit=b30a3eb38f9af283f18dbd3c7755653efc52c094
+_srcdir="rmtfs-$_commit"
+source=("$pkgname-$_commit.tar.gz::https://github.com/linux-msm/rmtfs/archive/$_commit.tar.gz")
+sha256sums=('SKIP')
 
 build() {
-	cd "$srcdir/rmtfs-$pkgver"
+	cd "$srcdir/$_srcdir"
 	make RMTFS_EFS_PATH="$_efspath" prefix=/usr rmtfs rmtfs.service rmtfs-dir.service
 }
 
 package() {
-	cd "$srcdir/rmtfs-$pkgver"
+	cd "$srcdir/$_srcdir"
 	install -Dm755 rmtfs "$pkgdir/usr/bin/rmtfs"
 	install -Dm644 rmtfs.service -t "$pkgdir/usr/lib/systemd/system"
 	install -Dm644 rmtfs-dir.service -t "$pkgdir/usr/lib/systemd/system"

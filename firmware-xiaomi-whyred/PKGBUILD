@@ -1,13 +1,14 @@
 # Maintainer: Kulesha Evgeniy
+# AutoUpdate: glavakartela/postmarketos-vendor-xiaomi-whyred main1
 pkgname=firmware-xiaomi-whyred
 pkgver=6
-pkgrel=5
+pkgrel=20261124183933
 pkgdesc="Firmware files for Xiaomi Redmi Note 5 Pro (whyred)"
 url="https://postmarketos.org"
 arch=('aarch64')
 license=('custom:proprietary')
 options=('!strip')
-_commit="a00c3503abab8becfc742077ad00a48060fb15d3"
+_commit=a00c3503abab8becfc742077ad00a48060fb15d3
 source=(
 	"$pkgname-$_commit.tar.gz::https://github.com/glavakartela/postmarketos-vendor-xiaomi-whyred/archive/$_commit.tar.gz"
 	"ath10k-fw-features.py"
