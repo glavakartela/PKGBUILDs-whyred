@@ -31,11 +31,14 @@ The CI also rebuilds the existing `device-xiaomi-whyred`,
 dependencies of `device-xiaomi-whyred`.  They are built only when
 changed and can be installed explicitly.
 
-Gamescope is not packaged here: the Adreno 509 Turnip bring-up does not
-yet provide dynamic rendering, timeline semaphores or buffer device
-address, so `gamescope 3.17` from ALARM extra fails with
-`VK_ERROR_FEATURE_NOT_PRESENT`.  DXVK/VKD3D are limited for the same
-reason; Wine currently works through wined3d/OpenGL.
+Gamescope is not packaged here; install `gamescope` from ALARM extra.
+The `sdm660-mesa-a5xx` Turnip now advertises the features Gamescope 3.17
+needs (dynamic rendering, timeline semaphores, swapchainMaintenance1,
+presentId/Wait and the compute image/texture path), and Gamescope starts
+and composites on whyred: `vkcube` through Gamescope WSI and `glxgears`
+through Xwayland both render inside it.  DXVK/VKD3D remain limited by
+the a5xx MVP (no MSAA, LRZ or tiled rendering); Wine currently works
+through wined3d/OpenGL.
 
 The Wine package pins Hangover 11.0 and builds the `aarch64` and
 `x86_64` PE architectures.  32-bit (`i386`) support needs box32 and is
