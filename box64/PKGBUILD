@@ -41,6 +41,14 @@ build() {
 	# "-march=armv8-a" to ASM flags disables LSE and breaks the build.
 	local _flags="-O2 -march=armv8-a+crc+crypto -mtune=cortex-a73.cortex-a53 -fwrapv -pipe"
 
+	# makepkg exports LDFLAGS with ELF-only options (-z relro/now).  The
+	# wowbox64 ExternalProject is a separate CMake build for Windows PE
+	# and inherits them, but lld rejects -z for that target.  Keep the
+	# hardening for the native box64 links via CMAKE_*_LINKER_FLAGS and
+	# remove the variable from the environment seen by wowbox64.
+	local _ldflags="-Wl,-O1,--sort-common,--as-needed,-z,relro,-z,now"
+	unset LDFLAGS
+
 	cmake -B build -S . \
 		-DARM64=ON \
 		-DBOX32=ON \
@@ -49,6 +57,8 @@ build() {
 		-DARM_DYNAREC=ON \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
 		-DCMAKE_C_FLAGS="$_flags" \
+		-DCMAKE_EXE_LINKER_FLAGS="$_ldflags" \
+		-DCMAKE_SHARED_LINKER_FLAGS="$_ldflags" \
 		-DCMAKE_INSTALL_PREFIX=/usr
 	make -j"$(nproc)" -C build
 }
