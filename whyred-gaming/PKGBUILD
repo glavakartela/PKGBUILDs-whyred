@@ -28,11 +28,12 @@ Install the pieces you need explicitly:
 
 Known limits on whyred (Adreno 509 / Turnip a5xx MVP):
 
-* Gamescope 3.17 can create its Vulkan device now that chip 5 advertises
-  dynamicRendering, timelineSemaphore, scalarBlockLayout,
-  samplerYcbcrConversion and nullDescriptor, and the compute path
-  supports storage images and sampled textures.  Sampler/image arrays
-  are still limited to element 0, so multi-layer effects may be wrong.
+* Gamescope 3.17 works: the chip 5 driver advertises dynamicRendering,
+  timelineSemaphore, scalarBlockLayout, samplerYcbcrConversion,
+  nullDescriptor and swapchainMaintenance1, and the compute path supports
+  storage images and sampled textures.  Verified with vkcube nested in a
+  KWin session (composited output visible).  Sampler/image arrays are
+  still limited to element 0, so multi-layer effects may be wrong.
 * DXVK/VKD3D are limited by the same MVP: no MSAA, no LRZ, no tiled
   rendering, and a reduced Vulkan feature set.  Wine works through
   wined3d/OpenGL for older applications.
