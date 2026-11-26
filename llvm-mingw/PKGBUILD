@@ -1,0 +1,45 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=llvm-mingw
+pkgver=20261117
+pkgrel=1
+pkgdesc="LLVM/Clang/LLD based mingw-w64 toolchain for aarch64 hosts"
+url="https://github.com/mstorsjo/llvm-mingw"
+arch=('aarch64')
+license=('custom')
+options=('!strip' '!debug')
+depends=('gcc-libs' 'glibc' 'zlib' 'libffi' 'libedit' 'ncurses' 'libxml2' 'bash')
+provides=(
+	'llvm-mingw-w64-toolchain'
+	'llvm-mingw-w64-toolchain-ucrt-bin'
+	'mingw-w64-gcc'
+	'mingw-w64-clang'
+	'mingw-w64-binutils'
+	'mingw-w64-tools'
+	'mingw-w64-crt'
+	'mingw-w64-headers'
+	'mingw-w64-winpthreads'
+	'mingw-w64-winstorecompat'
+)
+source=("https://github.com/mstorsjo/llvm-mingw/releases/download/$pkgver/llvm-mingw-$pkgver-ucrt-ubuntu-22.04-aarch64.tar.xz")
+sha256sums=('6d9442ead9ace3b3e4c3389bfef69f93f873305e0705e6cc60978ac895320872')
+
+package() {
+	local _dir="llvm-mingw-$pkgver-ucrt-ubuntu-22.04-aarch64"
+
+	install -d "$pkgdir/opt/llvm-mingw"
+	cp -a "$srcdir/$_dir" "$pkgdir/opt/llvm-mingw/llvm-mingw-ucrt"
+
+	install -Dm644 "$srcdir/$_dir/LICENSE.TXT" \
+		"$pkgdir/usr/share/licenses/$pkgname/LICENSE.TXT"
+
+	install -d "$pkgdir/etc/profile.d"
+	cat > "$pkgdir/etc/profile.d/llvm-mingw.sh" <<'EOF'
+# Add the llvm-mingw cross toolchain to PATH (appended, so the system
+# clang/gcc keep priority).
+case ":$PATH:" in
+	*:/opt/llvm-mingw/llvm-mingw-ucrt/bin:*) ;;
+	*) PATH="${PATH:+$PATH:}/opt/llvm-mingw/llvm-mingw-ucrt/bin" ;;
+esac
+export PATH
+EOF
+}

@@ -11,6 +11,10 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 | `q6voiced` | Q6Voice call audio routing |
 | `swclock-offset` | keep system time across a non-writable RTC |
 | `whyred-plasma` | Plasma Mobile package set (including Bluetooth UI) |
+| `llvm-mingw` | mingw-w64 LLVM toolchain for Wine/box64 builds |
+| `box64` | x86_64 emulator tuned for whyred |
+| `wine-aarch64` | Hangover Wine 11.0 (experimental) |
+| `whyred-gaming` | optional Wine/box64 meta package (experimental) |
 | `firmware-xiaomi-whyred` | firmware |
 | `sdm660-mesa-a5xx` | Mesa/GL + experimental Adreno 5xx Turnip ICD |
 | `sdm660-libcamera` | libcamera with SDM660 sensor properties |
@@ -20,6 +24,22 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 The CI also rebuilds the existing `device-xiaomi-whyred`,
 `firmware-xiaomi-whyred`, `bootmac`, `buffyboard`, `pd-mapper`,
 `qbootctl`, `qcom-diag`, `qrtr`, `rmtfs` and `tqftpserv` packages.
+
+## Gaming/Wine (optional)
+
+`llvm-mingw`, `box64`, `wine-aarch64` and `whyred-gaming` are **not**
+dependencies of `device-xiaomi-whyred`.  They are built only when
+changed and can be installed explicitly.
+
+Gamescope is not packaged here: the Adreno 509 Turnip bring-up does not
+yet provide dynamic rendering, timeline semaphores or buffer device
+address, so `gamescope 3.17` from ALARM extra fails with
+`VK_ERROR_FEATURE_NOT_PRESENT`.  DXVK/VKD3D are limited for the same
+reason; Wine currently works through wined3d/OpenGL.
+
+The Wine package pins Hangover 11.0 and builds the `aarch64` and
+`x86_64` PE architectures.  32-bit (`i386`) support needs box32 and is
+not enabled yet.
 
 ## Build
 
