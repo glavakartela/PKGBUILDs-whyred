@@ -30,19 +30,21 @@ build() {
 	# whyred has 4x Cortex-A73 + 4x Cortex-A53 (ARMv8.0-A with CRC and
 	# crypto).  Do not use pipa's armv8.2-a/Cortex-A77 flags: A73/A53
 	# lack the ARMv8.2 FP16/dot-product instructions.
-	export CFLAGS="-O2 -march=armv8-a+crc+crypto -mtune=cortex-a73.cortex-a53 -fwrapv -pipe"
-	export CXXFLAGS="$CFLAGS"
-	export CROSSCFLAGS="$CFLAGS"
-	export CROSSCXXFLAGS="$CROSSCFLAGS"
-	export CROSSLDFLAGS="-Wl,-O1"
-	export LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
+	#
+	# Pass the flags through CMake instead of exporting them: the
+	# wowbox64 sub-project is built by aarch64-w64-mingw32-clang, and
+	# clang rejects GCC's big.LITTLE "-mtune=cortex-a73.cortex-a53".
+	local _flags="-O2 -march=armv8-a+crc+crypto -mtune=cortex-a73.cortex-a53 -fwrapv -pipe"
 
 	cmake -B build -S . \
+		-DARM64=ON \
 		-DBOX32=ON \
 		-DBOX32_BINFMT=ON \
 		-DWOW64=ON \
 		-DARM_DYNAREC=ON \
 		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_C_FLAGS="$_flags" \
+		-DCMAKE_ASM_FLAGS="$_flags" \
 		-DCMAKE_INSTALL_PREFIX=/usr
 	make -j"$(nproc)" -C build
 }
