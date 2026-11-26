@@ -28,13 +28,14 @@ Install the pieces you need explicitly:
 
 Known limits on whyred (Adreno 509 / Turnip a5xx MVP):
 
-* Gamescope is not included and does not work yet.  Gamescope 3.17
-  requires dynamicRendering, timelineSemaphore, scalarBlockLayout,
-  nullDescriptor and bufferDeviceAddress; the a5xx bring-up does not
-  provide them, so vkCreateDevice fails with
-  VK_ERROR_FEATURE_NOT_PRESENT.
-* DXVK/VKD3D are limited by the same missing Vulkan features.  Wine
-  works through wined3d/OpenGL for older applications.
+* Gamescope 3.17 can create its Vulkan device now that chip 5 advertises
+  dynamicRendering, timelineSemaphore, scalarBlockLayout,
+  samplerYcbcrConversion and nullDescriptor, and the compute path
+  supports storage images and sampled textures.  Sampler/image arrays
+  are still limited to element 0, so multi-layer effects may be wrong.
+* DXVK/VKD3D are limited by the same MVP: no MSAA, no LRZ, no tiled
+  rendering, and a reduced Vulkan feature set.  Wine works through
+  wined3d/OpenGL for older applications.
 * Wine runs x86_64 Windows binaries through box64 (wowbox64.dll).
   32-bit (i386) PE support needs the i386 Wine arch and box32, which
   are not built yet.
