@@ -1,0 +1,35 @@
+#!/bin/sh
+# whyred-gamescope-session-nested - run Gamescope inside the current
+# Wayland session, without taking over DRM.  Safe for trying the gamepad UI
+# from Plasma.
+set -eu
+
+: "${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR must be set}"
+: "${WAYLAND_DISPLAY:?run this inside a Wayland session}"
+
+CONF=/etc/whyred-gamescope-session.conf
+[ -r "$CONF" ] && . "$CONF"
+USER_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/whyred-gamescope-session.conf"
+[ -r "$USER_CONF" ] && . "$USER_CONF"
+
+pick_app() {
+	if [ -n "${GAMESCOPE_SESSION_APP:-}" ]; then
+		printf '%s\n' "$GAMESCOPE_SESSION_APP"
+	elif command -v retroarch >/dev/null 2>&1; then
+		printf '%s\n' 'retroarch --menu'
+	elif command -v moonlight-qt >/dev/null 2>&1; then
+		printf '%s\n' 'moonlight-qt'
+	else
+		printf '%s\n' 'sh -c "echo Install retroarch or moonlight-qt for a gamepad UI.; sleep 30"'
+	fi
+}
+
+APP="$(pick_app)"
+WIDTH="${GAMESCOPE_SESSION_NESTED_WIDTH:-480}"
+HEIGHT="${GAMESCOPE_SESSION_NESTED_HEIGHT:-960}"
+
+exec gamescope \
+	--backend=wayland \
+	--expose-wayland \
+	-W "$WIDTH" -H "$HEIGHT" \
+	-- sh -c "$APP"

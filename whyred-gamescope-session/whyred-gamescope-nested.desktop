@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Whyred Gamescope (nested)
+Comment=Run Gamescope inside the current Plasma session
+Exec=/usr/bin/whyred-gamescope-session-nested
+Type=Application
+Terminal=false
+Categories=Game;
+Keywords=games;gamescope;retroarch;moonlight;

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Whyred Gamescope
+Comment=Gamescope session with a native gamepad UI (RetroArch/Moonlight)
+Exec=/usr/bin/whyred-gamescope-session
+Type=Application
+DesktopNames=gamescope
+Keywords=games;gamescope;steam;retroarch;moonlight;

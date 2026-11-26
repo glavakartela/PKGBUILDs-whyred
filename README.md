@@ -11,6 +11,7 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 | `q6voiced` | Q6Voice call audio routing |
 | `swclock-offset` | keep system time across a non-writable RTC |
 | `whyred-plasma` | Plasma Mobile package set (including Bluetooth UI) |
+| `whyred-gamescope-session` | optional Gamescope session/launcher with a native gamepad UI |
 | `firmware-xiaomi-whyred` | firmware |
 | `sdm660-mesa-a5xx` | Mesa/GL + experimental Adreno 5xx Turnip ICD |
 | `sdm660-libcamera` | libcamera with SDM660 sensor properties |
@@ -20,6 +21,25 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 The CI also rebuilds the existing `device-xiaomi-whyred`,
 `firmware-xiaomi-whyred`, `bootmac`, `buffyboard`, `pd-mapper`,
 `qbootctl`, `qcom-diag`, `qrtr`, `rmtfs` and `tqftpserv` packages.
+
+## Gamescope gamepad session (optional)
+
+`whyred-gamescope-session` is not a dependency of
+`device-xiaomi-whyred`.  It provides:
+
+- a Wayland login session (`Whyred Gamescope`) that starts Gamescope on the
+  DRM output with a native gamepad UI;
+- a nested launcher for Plasma that runs the same UI inside a Gamescope
+  window (safe for testing).
+
+The default client is `retroarch --menu` (Ozone), with `moonlight-qt` as a
+streaming alternative.  Select another command in
+`/etc/whyred-gamescope-session.conf` or
+`~/.config/whyred-gamescope-session.conf`.
+
+Steam Big Picture is **not** included: there is no ARM64 Steam client.  The
+x86 Steam client would have to run under box64/box32 (experimental, see the
+Wine stack); native RetroArch or Moonlight is the supported gamepad UI.
 
 ## Build
 

@@ -78,6 +78,7 @@ PACKAGES=(
 	sdm660-audio
 	sdm660-venus
 	whyred-plasma
+	whyred-gamescope-session
 )
 
 while IFS= read -r dir; do
