@@ -1,7 +1,7 @@
 # Maintainer: Kulesha Evgeniy
 pkgname=whyred-gamescope-session
 pkgver=1
-pkgrel=1
+pkgrel=2
 pkgdesc="Optional Gamescope session with a native gamepad UI for whyred"
 arch=('any')
 url="https://github.com/glavakartela/PKGBUILDs-whyred"
