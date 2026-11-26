@@ -16,7 +16,7 @@ pick_app() {
 	if [ -n "${GAMESCOPE_SESSION_APP:-}" ]; then
 		printf '%s\n' "$GAMESCOPE_SESSION_APP"
 	elif command -v retroarch >/dev/null 2>&1; then
-		printf '%s\n' 'retroarch --menu'
+		printf '%s\n' 'env SDL_VIDEODRIVER=x11 SDL_RENDER_DRIVER=opengl retroarch --appendconfig /usr/share/whyred-gamescope-session/retroarch-gamescope.cfg --menu'
 	elif command -v moonlight-qt >/dev/null 2>&1; then
 		printf '%s\n' 'moonlight-qt'
 	else

@@ -17,10 +17,12 @@ source=(
 	'whyred-gamescope-session'
 	'whyred-gamescope-session-nested'
 	'whyred-gamescope-session.conf'
+	'retroarch-gamescope.cfg'
 	'whyred-gamescope.desktop'
 	'whyred-gamescope-nested.desktop'
 )
 sha256sums=(
+	'SKIP'
 	'SKIP'
 	'SKIP'
 	'SKIP'
@@ -36,6 +38,8 @@ package() {
 
 	install -Dm644 whyred-gamescope-session.conf \
 		"$pkgdir/etc/whyred-gamescope-session.conf"
+	install -Dm644 retroarch-gamescope.cfg \
+		"$pkgdir/usr/share/whyred-gamescope-session/retroarch-gamescope.cfg"
 
 	install -Dm644 whyred-gamescope.desktop \
 		"$pkgdir/usr/share/wayland-sessions/whyred-gamescope.desktop"
