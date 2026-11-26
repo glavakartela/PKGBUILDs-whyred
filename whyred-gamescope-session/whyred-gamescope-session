@@ -43,5 +43,6 @@ exec gamescope \
 	--backend=drm \
 	--force-orientation "$ORIENT" \
 	--force-composition-rotation \
+	--force-windows-fullscreen \
 	-W "$WIDTH" -H "$HEIGHT" \
 	-- sh -c "$APP"

@@ -25,11 +25,31 @@ pick_app() {
 }
 
 APP="$(pick_app)"
-WIDTH="${GAMESCOPE_SESSION_NESTED_WIDTH:-480}"
-HEIGHT="${GAMESCOPE_SESSION_NESTED_HEIGHT:-960}"
+
+# Match the current Plasma output by default.  The phone can be rotated
+# (KWin switches between 480x960 and 960x480), and a fixed size leaves a
+# small Gamescope window in the middle of the screen.
+if [ -n "${GAMESCOPE_SESSION_NESTED_WIDTH:-}" ] &&
+   [ -n "${GAMESCOPE_SESSION_NESTED_HEIGHT:-}" ]; then
+	WIDTH="$GAMESCOPE_SESSION_NESTED_WIDTH"
+	HEIGHT="$GAMESCOPE_SESSION_NESTED_HEIGHT"
+else
+	GEOMETRY="$(kscreen-doctor -o 2>/dev/null |
+		sed -n 's/.*Geometry: .* \([0-9]\{1,\}\)x\([0-9]\{1,\}\).*/\1 \2/p' |
+		head -1)"
+	if [ -n "$GEOMETRY" ]; then
+		WIDTH="${GEOMETRY% *}"
+		HEIGHT="${GEOMETRY#* }"
+	else
+		WIDTH=480
+		HEIGHT=960
+	fi
+fi
 
 exec gamescope \
 	--backend=wayland \
 	--expose-wayland \
+	--fullscreen \
+	--force-windows-fullscreen \
 	-W "$WIDTH" -H "$HEIGHT" \
 	-- sh -c "$APP"
