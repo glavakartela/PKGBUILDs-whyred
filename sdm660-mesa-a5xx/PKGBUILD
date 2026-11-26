@@ -2,7 +2,7 @@
 # AutoUpdate: glavakartela/mesa-A5xx master
 pkgname=sdm660-mesa-a5xx
 pkgver=27.0.0
-pkgrel=20261122164008
+pkgrel=20261126175146
 pkgdesc="Mesa with Adreno 5xx / freedreno fixes for whyred"
 arch=('aarch64')
 url="https://github.com/glavakartela/mesa-A5xx"
@@ -52,7 +52,7 @@ optdepends=('vkmark: Vulkan scene/lighting stress test')
 provides=('mesa' 'opengl-driver' 'vulkan-freedreno' 'mesa-a5xx-test')
 conflicts=('mesa' 'mesa-a5xx-test' 'vulkan-freedreno')
 options=('!strip')
-_commit=ec1d4e5414a9bf5a6ba60e3435042730a51b979e
+_commit=113effd696de5f39515da46ddcf311fbe0ef3c22
 source=("mesa-a5xx-$pkgver.tar.gz::https://github.com/glavakartela/mesa-A5xx/archive/$_commit.tar.gz")
 sha256sums=('SKIP')
 
