@@ -1,0 +1,146 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=wine-aarch64
+pkgver=11.0
+pkgrel=1
+pkgdesc="Hangover Wine 11.0 for ARM64 (whyred, experimental)"
+url="https://github.com/AndreRH/wine"
+arch=('aarch64')
+license=('LGPL-2.1-or-later')
+options=('!lto' '!debug')
+depends=(
+	'desktop-file-utils'
+	'fontconfig'
+	'freetype2'
+	'gcc-libs'
+	'gettext'
+	'libxcursor'
+	'libxkbcommon'
+	'libxi'
+	'libxrandr'
+	'wayland'
+	'ffmpeg'
+	'unixodbc'
+)
+makedepends=(
+	'git'
+	'alsa-lib'
+	'gnutls'
+	'gst-plugins-base-libs'
+	'libpulse'
+	'libxcomposite'
+	'mesa'
+	'opencl-headers'
+	'opencl-icd-loader'
+	'sdl2'
+	'vulkan-headers'
+	'vulkan-icd-loader'
+	'llvm-mingw'
+	'clang'
+	'lld'
+	'linux-api-headers>=6.14'
+)
+optdepends=(
+	'alsa-lib'
+	'alsa-plugins'
+	'gnutls'
+	'gst-plugins-bad'
+	'gst-plugins-base'
+	'gst-plugins-base-libs'
+	'gst-plugins-good'
+	'gst-plugins-ugly'
+	'libpulse'
+	'libxcomposite'
+	'opencl-icd-loader'
+	'sdl2'
+	'wine-gecko'
+	'wine-mono'
+)
+provides=('wine-staging' 'wine-wow64' "wine=$pkgver")
+conflicts=('wine')
+install=wine.install
+source=(
+	"wine-$pkgver.tar.gz::https://github.com/AndreRH/wine/archive/refs/tags/hangover-$pkgver.tar.gz"
+	'30-win32-aliases.conf'
+	'wine-binfmt.conf'
+)
+sha256sums=(
+	'9915e4de1a75c98cc6e4ecf9da5853dcda09459046f576f953b1e9c3859ac3f5'
+	'9901a5ee619f24662b241672a7358364617227937d5f6d3126f70528ee5111e7'
+	'6dfdefec305024ca11f35ad7536565f5551f09119dda2028f194aee8f77077a4'
+)
+
+prepare() {
+	rm -rf "$pkgname-build"
+	mkdir "$pkgname-build"
+}
+
+build() {
+	cd "$pkgname-build"
+
+	# llvm-mingw provides the aarch64-w64-mingw32-clang / x86_64-w64-mingw32-clang
+	# wrappers used for the PE side; the Unix side uses the system clang.
+	export PATH="/opt/llvm-mingw/llvm-mingw-ucrt/bin:$PATH"
+	export CC=/usr/bin/clang
+	export CXX=/usr/bin/clang++
+	export CFLAGS="-O2 -march=armv8-a+crc+crypto -mtune=cortex-a73 -fwrapv -pipe"
+	export CXXFLAGS="$CFLAGS"
+	export LDFLAGS="-Wl,-O1,--sort-common,--as-needed -fuse-ld=lld"
+
+	export CROSSCFLAGS="-O2 -fwrapv -pipe"
+	export CROSSCXXFLAGS="$CROSSCFLAGS"
+	export CROSSLDFLAGS="-Wl,/FILEALIGN:4096,/OPT:REF,/OPT:ICF"
+
+	../wine-hangover-$pkgver/configure \
+		--disable-tests \
+		--prefix=/usr \
+		--libdir=/usr/lib \
+		--with-x \
+		--with-wayland \
+		--with-gstreamer \
+		--with-ffmpeg \
+		--without-oss \
+		--without-sane \
+		--without-v4l2 \
+		--without-cups \
+		--without-gphoto \
+		--without-xinerama \
+		--without-pcsclite \
+		--without-xxf86vm \
+		--without-pcap \
+		--with-mingw=clang \
+		--enable-archs=aarch64,x86_64
+
+	make -j"$(nproc)"
+}
+
+package() {
+	cd "$pkgname-build"
+
+	make prefix="$pkgdir/usr" \
+		libdir="$pkgdir/usr/lib" \
+		dlldir="$pkgdir/usr/lib/wine" install
+
+	# Compatibility with scripts that call wine64.
+	ln -sf /usr/bin/wine "$pkgdir/usr/bin/wine64"
+
+	# Strip the PE binaries; makepkg does not handle them.
+	export PATH="/opt/llvm-mingw/llvm-mingw-ucrt/bin:$PATH"
+	for _arch in aarch64-windows x86_64-windows; do
+		[ -d "$pkgdir/usr/lib/wine/$_arch" ] || continue
+		llvm-strip --strip-unneeded "$pkgdir"/usr/lib/wine/"$_arch"/*.{dll,exe}
+	done
+
+	# Font aliasing for Win32 applications.
+	install -d "$pkgdir"/usr/share/fontconfig/conf.{avail,default}
+	install -m644 "$srcdir/30-win32-aliases.conf" \
+		"$pkgdir/usr/share/fontconfig/conf.avail"
+	ln -s ../conf.avail/30-win32-aliases.conf \
+		"$pkgdir/usr/share/fontconfig/conf.default/30-win32-aliases.conf"
+
+	install -Dm644 "$srcdir/wine-binfmt.conf" \
+		"$pkgdir/usr/lib/binfmt.d/wine.conf"
+
+	# NTSync (kernel 6.14+).  Wine falls back to the server if unavailable.
+	printf 'ntsync\n' | install -Dm644 /dev/stdin \
+		"$pkgdir/usr/lib/modules-load.d/wine-pure.conf"
+}

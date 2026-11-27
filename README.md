@@ -12,6 +12,10 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 | `swclock-offset` | keep system time across a non-writable RTC |
 | `whyred-plasma` | Plasma Mobile package set (including Bluetooth UI) |
 | `whyred-gamescope-session` | optional Gamescope session/launcher with a native gamepad UI |
+| `llvm-mingw` | mingw-w64 LLVM toolchain for Wine/box64 builds |
+| `box64` | x86_64 emulator tuned for whyred |
+| `wine-aarch64` | Hangover Wine 11.0 (experimental) |
+| `whyred-gaming` | optional Wine/box64 meta package (experimental) |
 | `firmware-xiaomi-whyred` | firmware |
 | `sdm660-mesa-a5xx` | Mesa/GL + experimental Adreno 5xx Turnip ICD |
 | `sdm660-libcamera` | libcamera with SDM660 sensor properties |
@@ -21,6 +25,25 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 The CI also rebuilds the existing `device-xiaomi-whyred`,
 `firmware-xiaomi-whyred`, `bootmac`, `buffyboard`, `pd-mapper`,
 `qbootctl`, `qcom-diag`, `qrtr`, `rmtfs` and `tqftpserv` packages.
+
+## Gaming/Wine (optional)
+
+`llvm-mingw`, `box64`, `wine-aarch64` and `whyred-gaming` are **not**
+dependencies of `device-xiaomi-whyred`.  They are built only when
+changed and can be installed explicitly.
+
+Gamescope is not packaged here; install `gamescope` from ALARM extra.
+The `sdm660-mesa-a5xx` Turnip now advertises the features Gamescope 3.17
+needs (dynamic rendering, timeline semaphores, swapchainMaintenance1,
+presentId/Wait and the compute image/texture path), and Gamescope starts
+and composites on whyred: `vkcube` through Gamescope WSI and `glxgears`
+through Xwayland both render inside it.  DXVK/VKD3D remain limited by
+the a5xx MVP (no MSAA, LRZ or tiled rendering); Wine currently works
+through wined3d/OpenGL.
+
+The Wine package pins Hangover 11.0 and builds the `aarch64` and
+`x86_64` PE architectures.  32-bit (`i386`) support needs box32 and is
+not enabled yet.
 
 ## Gamescope gamepad session (optional)
 
@@ -37,9 +60,10 @@ streaming alternative.  Select another command in
 `/etc/whyred-gamescope-session.conf` or
 `~/.config/whyred-gamescope-session.conf`.
 
-Steam Big Picture is **not** included: there is no ARM64 Steam client.  The
-x86 Steam client would have to run under box64/box32 (experimental, see the
-Wine stack); native RetroArch or Moonlight is the supported gamepad UI.
+Steam Big Picture is **not** included: Valve's ARM64 client needs ARMv8.1
+LSE atomics, which Cortex-A73/A53 do not have, and the x86 client under
+box64/box32 is experimental (see the Wine stack).  Native RetroArch or
+Moonlight is the supported gamepad UI.
 
 ## Build
 

@@ -1,0 +1,25 @@
+diff --git a/wine/common/crt.c b/wine/common/crt.c
+index a9b691d..18b30e0 100644
+--- a/wine/common/crt.c
++++ b/wine/common/crt.c
+@@ -207,4 +207,18 @@ int box_fclose(BOXFILE* stream)
+     BOOL closed = CloseHandle(stream->hFile);
+     WinFree(stream);
+     return closed ? 0 : EOF;
+-}
+\ No newline at end of file
++}
++/* llvm-mingw's <strings.h> leaves strcasecmp as an external symbol, but
++ * wowbox64 is linked with -nostdlib and this CRT does not provide it.
++ * box64's env.c uses it for case-insensitive key matching. */
++int strcasecmp(const char *s1, const char *s2)
++{
++    for (;;) {
++        unsigned char c1 = (unsigned char)*s1++;
++        unsigned char c2 = (unsigned char)*s2++;
++        if (c1 >= 'A' && c1 <= 'Z') c1 += 'a' - 'A';
++        if (c2 >= 'A' && c2 <= 'Z') c2 += 'a' - 'A';
++        if (c1 != c2 || c1 == 0)
++            return (int)c1 - (int)c2;
++    }
++}

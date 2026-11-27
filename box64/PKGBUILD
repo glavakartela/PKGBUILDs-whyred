@@ -1,0 +1,86 @@
+# Maintainer: Kulesha Evgeniy
+pkgname=box64
+pkgver=0.4.0
+pkgrel=1
+pkgdesc="Linux userspace x86_64 emulator tuned for whyred (Cortex-A73/A53)"
+url="https://github.com/ptitSeb/box64"
+arch=('aarch64')
+license=('MIT')
+options=('!debug')
+depends=('gcc-libs')
+makedepends=('git' 'cmake' 'python' 'llvm-mingw')
+install=box64.install
+optdepends=('wine-aarch64: run x86_64 Windows applications')
+source=(
+	"$pkgname-$pkgver.tar.gz::https://github.com/ptitSeb/$pkgname/archive/v$pkgver.tar.gz"
+	'wowbox64-strcasecmp.patch'
+	'box64.install'
+)
+sha256sums=(
+	'4504b0df2d9ccfcf15b4d0c80664e216dc1170a4f8caeca46e79b93ff47e5e87'
+	'47227baa5b319e5f6ef275e16260cf28fbd74304c80a68ca0ecdd0b4ace3e314'
+	'7e94518dbd11121f150a51b64f4c0ec11f844a83f7b15205d28c1de63de699f2'
+)
+
+prepare() {
+	cd "$pkgname-$pkgver"
+	patch -Np1 -i "$srcdir/wowbox64-strcasecmp.patch"
+}
+
+build() {
+	cd "$pkgname-$pkgver"
+
+	# The wowbox64.dll ExternalProject uses the aarch64-w64-mingw32
+	# wrappers from llvm-mingw.  The native box64 build keeps using GCC.
+	export PATH="/opt/llvm-mingw/llvm-mingw-ucrt/bin:$PATH"
+
+	# whyred has 4x Cortex-A73 + 4x Cortex-A53 (ARMv8.0-A with CRC and
+	# crypto).  Do not use pipa's armv8.2-a/Cortex-A77 flags: A73/A53
+	# lack the ARMv8.2 FP16/dot-product instructions.
+	#
+	# Pass the flags through CMake instead of exporting them: the
+	# wowbox64 sub-project is built by aarch64-w64-mingw32-clang, and
+	# clang rejects GCC's big.LITTLE "-mtune=cortex-a73.cortex-a53".
+	#
+	# CMAKE_C_FLAGS only reaches the C sources.  The helper assembly must
+	# keep box64's own "-mcpu=cortex-a76" (arm64_lock.S assembles LSE
+	# atomics, selected at runtime through cpuext); adding our
+	# "-march=armv8-a" to ASM flags disables LSE and breaks the build.
+	local _flags="-O2 -march=armv8-a+crc+crypto -mtune=cortex-a73.cortex-a53 -fwrapv -pipe"
+
+	# makepkg exports LDFLAGS with ELF-only options (-z relro/now) and
+	# CFLAGS with hardening (-fstack-protector-strong, FORTIFY).  The
+	# wowbox64 ExternalProject is a separate CMake build for Windows PE
+	# with -nostdlib, inherits them, and then fails on __stack_chk_* /
+	# *_chk / vsnprintf references that its own CRT does not provide.
+	# Keep hardening for the native box64 links via CMAKE_*_LINKER_FLAGS
+	# and remove the variables from the environment seen by wowbox64.
+	local _ldflags="-Wl,-O1,--sort-common,--as-needed,-z,relro,-z,now"
+	unset LDFLAGS CFLAGS CXXFLAGS
+
+	cmake -B build -S . \
+		-DARM64=ON \
+		-DBOX32=ON \
+		-DBOX32_BINFMT=ON \
+		-DWOW64=ON \
+		-DARM_DYNAREC=ON \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DCMAKE_C_FLAGS="$_flags" \
+		-DCMAKE_EXE_LINKER_FLAGS="$_ldflags" \
+		-DCMAKE_SHARED_LINKER_FLAGS="$_ldflags" \
+		-DCMAKE_INSTALL_PREFIX=/usr
+	make -j"$(nproc)" -C build
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+
+	make DESTDIR="$pkgdir" install -C build
+
+	install -Dm755 build/wowbox64-prefix/src/wowbox64-build/wowbox64.dll \
+		"$pkgdir/usr/lib/wine/aarch64-windows/wowbox64.dll"
+
+	install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+	install -d "$pkgdir/usr/share/doc/$pkgname"
+	cp -R docs/* "$pkgdir/usr/share/doc/$pkgname/"
+}

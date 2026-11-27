@@ -54,6 +54,7 @@ declare -A INSTALL=(
 	[swclock-offset]=1
 	[firmware-xiaomi-whyred]=1
 	[sdm660-linux-whyred]=1
+	[llvm-mingw]=1
 )
 
 # Build order.  New package directories not listed here are appended at the end.
@@ -79,6 +80,10 @@ PACKAGES=(
 	sdm660-venus
 	whyred-plasma
 	whyred-gamescope-session
+	llvm-mingw
+	box64
+	wine-aarch64
+	whyred-gaming
 )
 
 while IFS= read -r dir; do
