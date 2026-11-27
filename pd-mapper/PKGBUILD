@@ -2,7 +2,7 @@
 # AutoUpdate: linux-msm/pd-mapper master
 pkgname=pd-mapper
 pkgver=20260909
-pkgrel=20261126162714
+pkgrel=20261126174239
 pkgdesc="Qualcomm protection domain mapper service (QMI servreg_loc over QRTR)"
 arch=('aarch64')
 url="https://github.com/linux-msm/pd-mapper"

@@ -11,6 +11,7 @@ Packages for the mainline SDM636 / Adreno 509 setup.
 | `q6voiced` | Q6Voice call audio routing |
 | `swclock-offset` | keep system time across a non-writable RTC |
 | `whyred-plasma` | Plasma Mobile package set (including Bluetooth UI) |
+| `whyred-gamescope-session` | optional Gamescope session/launcher with a native gamepad UI |
 | `llvm-mingw` | mingw-w64 LLVM toolchain for Wine/box64 builds |
 | `box64` | x86_64 emulator tuned for whyred |
 | `wine-aarch64` | Hangover Wine 11.0 (experimental) |
@@ -43,6 +44,26 @@ through wined3d/OpenGL.
 The Wine package pins Hangover 11.0 and builds the `aarch64` and
 `x86_64` PE architectures.  32-bit (`i386`) support needs box32 and is
 not enabled yet.
+
+## Gamescope gamepad session (optional)
+
+`whyred-gamescope-session` is not a dependency of
+`device-xiaomi-whyred`.  It provides:
+
+- a Wayland login session (`Whyred Gamescope`) that starts Gamescope on the
+  DRM output with a native gamepad UI;
+- a nested launcher for Plasma that runs the same UI inside a Gamescope
+  window (safe for testing).
+
+The default client is `retroarch --menu` (Ozone), with `moonlight-qt` as a
+streaming alternative.  Select another command in
+`/etc/whyred-gamescope-session.conf` or
+`~/.config/whyred-gamescope-session.conf`.
+
+Steam Big Picture is **not** included: Valve's ARM64 client needs ARMv8.1
+LSE atomics, which Cortex-A73/A53 do not have, and the x86 client under
+box64/box32 is experimental (see the Wine stack).  Native RetroArch or
+Moonlight is the supported gamepad UI.
 
 ## Build
 

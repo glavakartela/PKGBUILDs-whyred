@@ -79,6 +79,7 @@ PACKAGES=(
 	sdm660-audio
 	sdm660-venus
 	whyred-plasma
+	whyred-gamescope-session
 	llvm-mingw
 	box64
 	wine-aarch64

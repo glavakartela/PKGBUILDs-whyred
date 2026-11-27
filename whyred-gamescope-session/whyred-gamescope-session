@@ -1,0 +1,79 @@
+#!/bin/sh
+# whyred-gamescope-session - Gamescope as a Wayland login session.
+#
+# Started by the display manager.  Gamescope takes over the DRM output and
+# launches a gamepad-friendly client (RetroArch by default).  A client can be
+# selected in /etc/whyred-gamescope-session.conf or
+# ~/.config/whyred-gamescope-session.conf.
+set -eu
+
+: "${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR must be set by the session manager}"
+
+CONF=/etc/whyred-gamescope-session.conf
+[ -r "$CONF" ] && . "$CONF"
+USER_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/whyred-gamescope-session.conf"
+[ -r "$USER_CONF" ] && . "$USER_CONF"
+
+pick_app() {
+	if [ -n "${GAMESCOPE_SESSION_APP:-}" ]; then
+		printf '%s\n' "$GAMESCOPE_SESSION_APP"
+	elif command -v retroarch >/dev/null 2>&1; then
+		printf '%s\n' 'env SDL_VIDEODRIVER=x11 SDL_RENDER_DRIVER=opengl retroarch --appendconfig /usr/share/whyred-gamescope-session/retroarch-gamescope.cfg --menu'
+	elif command -v moonlight-qt >/dev/null 2>&1; then
+		printf '%s\n' 'moonlight-qt'
+	else
+		printf '%s\n' 'sh -c "echo Install retroarch or moonlight-qt for a gamepad UI.; sleep 30"'
+	fi
+}
+
+APP="$(pick_app)"
+ORIENT="${GAMESCOPE_SESSION_ORIENTATION:-left}"
+
+# Use the phone's own display settings: the panel mode divided by the
+# KScreen scale.  On whyred that is 1080x2160 / 2.25 = 480x960, i.e. the
+# same logical pixel size Plasma uses, instead of a hard-coded 1080p
+# surface that makes the UI look too large or too small.
+detect_logical_size() {
+	_PANEL_MODE="$(cat /sys/class/drm/card*-DSI-*/modes 2>/dev/null | head -1)"
+	_PANEL_SCALE="$(sed -n 's/.*"scale": *\([0-9][0-9.]*\).*/\1/p' \
+		"$HOME/.config/kwinoutputconfig.json" 2>/dev/null | head -1)"
+	[ -n "$_PANEL_MODE" ] && [ -n "$_PANEL_SCALE" ] || return 1
+	_PANEL_W="${_PANEL_MODE%x*}"
+	_PANEL_H="${_PANEL_MODE#*x}"
+	awk -v w="$_PANEL_W" -v h="$_PANEL_H" -v s="$_PANEL_SCALE" \
+		'BEGIN { printf "%d %d\n", w / s + 0.5, h / s + 0.5 }'
+}
+
+if [ -n "${GAMESCOPE_SESSION_WIDTH:-}" ] &&
+   [ -n "${GAMESCOPE_SESSION_HEIGHT:-}" ]; then
+	WIDTH="$GAMESCOPE_SESSION_WIDTH"
+	HEIGHT="$GAMESCOPE_SESSION_HEIGHT"
+elif LOGICAL="$(detect_logical_size)"; then
+	LOGICAL_W="${LOGICAL% *}"
+	LOGICAL_H="${LOGICAL#* }"
+	case "$ORIENT" in
+		left|right) WIDTH="$LOGICAL_H"; HEIGHT="$LOGICAL_W" ;;
+		*)          WIDTH="$LOGICAL_W"; HEIGHT="$LOGICAL_H" ;;
+	esac
+else
+	# Keep the previous conservative fallback if the panel config is not
+	# readable yet (for example, a fresh user account).
+	WIDTH=1920
+	HEIGHT=1080
+fi
+
+LOG="${XDG_RUNTIME_DIR}/whyred-gamescope-session.log"
+exec >"$LOG" 2>&1
+
+echo "whyred-gamescope-session: app=$APP orientation=$ORIENT size=${WIDTH}x${HEIGHT}"
+
+# Force compositor rotation: the msm DRM driver does not expose a usable
+# rotation property on all kernels, and Gamescope's plane rotation path is
+# fragile on a5xx.
+exec gamescope \
+	--backend=drm \
+	--force-orientation "$ORIENT" \
+	--force-composition-rotation \
+	--force-windows-fullscreen \
+	-W "$WIDTH" -H "$HEIGHT" \
+	-- sh -c "$APP"

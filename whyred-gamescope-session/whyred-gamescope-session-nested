@@ -1,0 +1,55 @@
+#!/bin/sh
+# whyred-gamescope-session-nested - run Gamescope inside the current
+# Wayland session, without taking over DRM.  Safe for trying the gamepad UI
+# from Plasma.
+set -eu
+
+: "${XDG_RUNTIME_DIR:?XDG_RUNTIME_DIR must be set}"
+: "${WAYLAND_DISPLAY:?run this inside a Wayland session}"
+
+CONF=/etc/whyred-gamescope-session.conf
+[ -r "$CONF" ] && . "$CONF"
+USER_CONF="${XDG_CONFIG_HOME:-$HOME/.config}/whyred-gamescope-session.conf"
+[ -r "$USER_CONF" ] && . "$USER_CONF"
+
+pick_app() {
+	if [ -n "${GAMESCOPE_SESSION_APP:-}" ]; then
+		printf '%s\n' "$GAMESCOPE_SESSION_APP"
+	elif command -v retroarch >/dev/null 2>&1; then
+		printf '%s\n' 'env SDL_VIDEODRIVER=x11 SDL_RENDER_DRIVER=opengl retroarch --appendconfig /usr/share/whyred-gamescope-session/retroarch-gamescope.cfg --menu'
+	elif command -v moonlight-qt >/dev/null 2>&1; then
+		printf '%s\n' 'moonlight-qt'
+	else
+		printf '%s\n' 'sh -c "echo Install retroarch or moonlight-qt for a gamepad UI.; sleep 30"'
+	fi
+}
+
+APP="$(pick_app)"
+
+# Match the current Plasma output by default.  The phone can be rotated
+# (KWin switches between 480x960 and 960x480), and a fixed size leaves a
+# small Gamescope window in the middle of the screen.
+if [ -n "${GAMESCOPE_SESSION_NESTED_WIDTH:-}" ] &&
+   [ -n "${GAMESCOPE_SESSION_NESTED_HEIGHT:-}" ]; then
+	WIDTH="$GAMESCOPE_SESSION_NESTED_WIDTH"
+	HEIGHT="$GAMESCOPE_SESSION_NESTED_HEIGHT"
+else
+	GEOMETRY="$(kscreen-doctor -o 2>/dev/null |
+		sed -n 's/.*Geometry: .* \([0-9]\{1,\}\)x\([0-9]\{1,\}\).*/\1 \2/p' |
+		head -1)"
+	if [ -n "$GEOMETRY" ]; then
+		WIDTH="${GEOMETRY% *}"
+		HEIGHT="${GEOMETRY#* }"
+	else
+		WIDTH=480
+		HEIGHT=960
+	fi
+fi
+
+exec gamescope \
+	--backend=wayland \
+	--expose-wayland \
+	--fullscreen \
+	--force-windows-fullscreen \
+	-W "$WIDTH" -H "$HEIGHT" \
+	-- sh -c "$APP"
